@@ -18,7 +18,7 @@ class CreateNotificationsTable extends Migration
             $table->string('type');
             $table->string('initiator_id');
             $table->string('receipient_id');
-            $table->integer('link');
+            $table->string('link')->nullable();
             $table->string('linkmodel');
             $table->boolean('deleted')->default(false);
             $table->integer('created_at')->default(0);

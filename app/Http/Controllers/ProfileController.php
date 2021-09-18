@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Profile;
 use App\User;
+use App\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -309,6 +310,19 @@ class ProfileController extends Controller
                 'status' => 5000,
             ]);
         }
+            if ($msg == "profile followed") {
+                Notification::saveNote([
+                    'receipient_id' => $tofollowactionprofile->profile_id,
+                    'type' => 'profilefollow',
+                    'link'=> 'empty'
+                ]);
+           }else {
+               Notification::deleteNote([
+                    'receipient_id' => $tofollowactionprofile->profile_id,
+                    'type' => 'profilefollow',
+                    'link' => 'empty' 
+                ]);
+           }
         return response()->json([
             'message' => $msg,
             'status' => 200,

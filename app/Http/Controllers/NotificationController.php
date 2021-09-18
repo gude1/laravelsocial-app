@@ -50,17 +50,17 @@ class NotificationController extends Controller
         if (request()->limiter) {
           $notes = $userprofile->notifications()
             ->where('id','<',request()->limiter)
-            ->where('deleted' => false)
+            ->where(['deleted' => false])
             ->with(['initiator_profile.user', 'recipient_profile.user'])
-            ->orderBy('id', 'desc')
+            ->orderBy('created_at', 'desc')
             ->groupBy('linkmodel')
             ->limit(10)
             ->get();
         } else {
             $notes = $userprofile->notifications()
             ->with(['initiator_profile.user', 'recipient_profile.user'])
-            ->where('deleted' => false)
-            ->orderBy('id', 'desc')
+            ->where(['deleted' => false])
+            ->orderBy('created_at', 'desc')
             ->groupBy('linkmodel')
             ->limit(10)
             ->get();
@@ -126,7 +126,7 @@ class NotificationController extends Controller
       if(empty($note)  || is_null($note)){
          return;
       }
-      $note->related_count = Notification::where('linkmodel',$note->linkmodel)->count() -1;
+      $note->related_count = Notification::where('linkmodel',$note->linkmodel)->where(['deleted'=>false])->count() -1;
       switch ($note->type) {
           case 'postlike':
               $note->post = Post::with(['profile.user'])->firstWhere('postid',$note->link);
