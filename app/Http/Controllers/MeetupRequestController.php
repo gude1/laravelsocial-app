@@ -63,6 +63,7 @@ class MeetupRequestController extends Controller
         $query->whereHas('user', function (Builder $query) {
           $query->where([
             'deleted' => false,
+            'suspended' => false,
             'approved' => true,
           ]);
         });
@@ -88,6 +89,7 @@ class MeetupRequestController extends Controller
         $query->whereHas('user', function (Builder $query) {
           $query->where([
             'deleted' => false,
+            'suspended' => false,
             'approved' => true,
           ]);
         });
@@ -338,6 +340,7 @@ class MeetupRequestController extends Controller
       $query->whereHas('user', function (Builder $query) {
         $query->where([
           'deleted' => false,
+          'suspended' => false,
           'approved' => true,
         ]);
       });
@@ -386,6 +389,7 @@ class MeetupRequestController extends Controller
       $query->whereHas('user', function (Builder $query) {
         $query->where([
           'deleted' => false,
+          'suspended' => false,
           'approved' => true,
         ]);
       });

@@ -13,7 +13,7 @@ use App\Events\NotifyEvent;
  */
 
 Route::get('/', function () {
-    return 'request sent';
+  return 'request sent';
 });
 
 Route::get('/eve', function () {
@@ -25,10 +25,10 @@ Route::get('adminregisterscreen', 'Admin\AdminUserController@viewRegister');
 Route::get('/adminloginscreen', 'Admin\AdminUserController@viewLogin');
 
 Route::prefix('admindashboard')->middleware('auth.admin')->group(function () {
-    Route::prefix('profiles')->group(function () {
-        Route::get('/', 'Admin\AccessProfileController@fetchUsers');
-        Route::get('/bygender', 'Admin\AccessProfileController@fetcthProfilesByGender');
-    });
+  Route::prefix('profiles')->group(function () {
+    Route::get('/', 'Admin\AccessProfileController@fetchUsers');
+    Route::get('/bygender', 'Admin\AccessProfileController@fetcthProfilesByGender');
+  });
 });
 
 Route::match(['get', 'post'], '/registeradmin', 'Admin\AdminUserController@store');

@@ -24,19 +24,21 @@ $links = [
 @section('body')
 <!--navbar-->
 <div class='' style="width:70%;margin:auto;">
-@includeIf('admin.includes.dashboardnav',
-compact('links'))
+  @includeIf('admin.includes.dashboardnav',
+  compact('links'))
 </div>
 <!--navbar-->
 
 <div id='profilectn'>
-@if(isset($users) && count($users) > 0)
-@includeIf('admin.includes.displayuser',[
-     'displayusersarr' => $users
+  @if(isset($users) && count($users) > 0)
+  @includeIf('admin.includes.displayuser',[
+  'displayusersarr' => $users
   ])
-@else
-<p class=' w3-center w3-text-gray w3-large'>No results yet</p>
-@endif
+  @else
+  <p class=' w3-center w3-text-gray w3-large'>
+    No results yet
+  </p>
+  @endif
 </div>
 
 @endsection
