@@ -29,6 +29,7 @@ class PostCommentReply extends Model
      */
     public function getReplyLikedAttribute($r)
     {
+        return null;
         $userprofile = auth()->user()->profile;
         return $this->likes()->where('liker_id', $userprofile->profile_id)->exists();
     }

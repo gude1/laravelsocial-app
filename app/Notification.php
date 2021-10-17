@@ -37,7 +37,7 @@ class Notification extends Model
         $query_data = array_merge($data,[
         'initiator_id' => auth()->user()->profile->profile_id
         ]);
-        
+
         $other_data = array_merge($data, [
                 'initiator_id' => auth()->user()->profile->profile_id,
                 'linkmodel' => "{$data['type']}{$data['link']}",
