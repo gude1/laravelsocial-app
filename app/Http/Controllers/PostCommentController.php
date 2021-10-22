@@ -190,7 +190,7 @@ class PostCommentController extends Controller
     $data['updated_at'] = time();
     $comment = PostComment::create($data);
     if (!$comment) {
-      return reponse()->json([
+      return response()->json([
         'errmsg' => 'could not post comment please try again',
         'status' => 500,
       ]);

@@ -140,10 +140,10 @@ class NotificationController extends Controller
                 $note->post = Post::with(['profile.user'])->firstWhere('postid', $note->link);
                 break;
             case 'postcomment':
-                $note->postcomment = PostComment::with(['owner_post.profile.user', 'profile.user'])->firstWhere('postcommentid', $note->link);
+                $note->postcomment = PostComment::with(['owner_post.profile.user', 'profile.user'])->firstWhere('commentid', $note->link);
                 break;
             case 'postcommentlike':
-                $note->postcomment = PostComment::with(['owner_post.profile.user', 'profile.user'])->firstWhere('postcommentid', $note->link);
+                $note->postcomment = PostComment::with(['owner_post.profile.user', 'profile.user'])->firstWhere('commentid', $note->link);
                 break;
             case 'postcommentreply':
                 $note->postcommentreply = PostCommentReply::with(['origin.profile.user', 'profile.user'])->firstWhere('replyid', $note->link);
