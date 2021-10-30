@@ -26,10 +26,11 @@ class PostController extends Controller
   protected $user_blocked_profiles_id = [];
 
   /**
-  *Instantiate a new controller instance.
-  * @return void
-  */
-  public function __construct() {
+   *Instantiate a new controller instance.
+   * @return void
+   */
+  public function __construct()
+  {
 
     $this->middleware('jwt.verify');
     $this->middleware('app.verify');
@@ -39,7 +40,7 @@ class PostController extends Controller
     } else {
       return;
     }
-    $this->followed_profiles_id = json_decode($this->profile->followed_profiles->pluck('profile_id'), true);
+    $this->followed_profiles_id = $this->profile->followed_profiles->pluck('profile_id')->toArray();
     $this->postsettings = $this->profile->post_settings;
     if (!is_null($this->postsettings)) {
       $this->blacklisted_posts = $this->postsettings->blacklisted_posts;
@@ -52,9 +53,10 @@ class PostController extends Controller
   }
 
   /**
-  * protected function to sort  according to id in db
-  */
-  protected function idSort($data) {
+   * protected function to sort  according to id in db
+   */
+  protected function idSort($data)
+  {
     usort($data, function ($item1, $item2) {
       return $item2->id - $item1->id;
     });
@@ -62,68 +64,98 @@ class PostController extends Controller
   }
 
   /**
-  * function to get list of timelinepost for user
-  *
-  * @return \Illuminate\Http\Response
-  */
-  public function index() {
-    //return Post::all();
+   * function to get list of timelinepost for user
+   *
+   * @return \Illuminate\Http\Response
+   */
+  public function index()
+  {
     $userprofile = $this->profile;
     $postsettings = $userprofile->post_settings;
-    $followedposts = $this->addKnownSharersProfile($this->getFollowedPosts());
-    $withincampusposts = $this->addKnownSharersProfile($this->getWithinCampusPost());
-    $generalposts = $this->addKnownSharersProfile($this->getAnyPost());
+    $exclude_ids = [];
+    $links = is_array(request()->links) ? request()->links : [];
+    $first = count($links) > 0 ? $links[0] : null;
+    $second = count($links) > 1  ? $links[1] : null;
     //determine the range of post to return based on user preference
-    if (is_null($postsettings) || empty($postsettings) ||
+    if (
+      is_null($postsettings) || empty($postsettings) ||
       is_null($postsettings->timeline_post_range) ||
       empty($postsettings->timeline_post_range) ||
       $postsettings->timeline_post_range == 'all'
     ) {
-      $posts = array_merge($generalposts->items(), $followedposts->items());
-      $posts = $this->idSort($posts);
+
+      $generalposts = $this->addKnownSharersProfile($this->getAnyPost($first));
+      $exclude_ids =  $generalposts->map(function ($post, $index) {
+        return $post->id;
+      });
+      $followedposts = $this->addKnownSharersProfile($this->getFollowedPosts($second, $exclude_ids->toArray()));
       return response()->json([
         'message' => 'posts fetched',
+        'status' => 200,
         'postlistrange' => 'all',
-        'timelineposts' => $posts,
-        'generalpostnexturl' => $generalposts->nextPageUrl(),
-        'followedpostnexturl' => $followedposts->nextPageUrl(),
+        'timelineposts' => array_merge($generalposts->toArray(), $followedposts->toArray()),
+        'links' => [
+          $this->id($generalposts->last()),
+          $this->id($followedposts->last())
+        ]
       ]);
-
     } elseif ($postsettings->timeline_post_range == 'campus') {
-      $posts = array_merge($followedposts->items(), $withincampusposts->items());
-      $posts = $this->idSort($posts);
+      $withincampusposts = $this->addKnownSharersProfile($this->getWithinCampusPost($first));
+      $exclude_ids =  $withincampusposts->map(function ($post, $index) {
+        return $post->id;
+      });
+      $followedposts = $this->addKnownSharersProfile($this->getFollowedPosts($second, $exclude_ids->toArray()));
       return response()->json([
         'message' => 'posts fetched',
+        'status' => 200,
         'postlistrange' => 'campus',
-        'timelineposts' => $posts,
-        'withincampuspostsnexturl' => $withincampusposts->nextPageUrl(),
-        'followedpostnexturl' => $followedposts->nextPageUrl(),
+        'timelineposts' => array_merge($withincampusposts->toArray(), $followedposts->toArray()),
+        'links' => [
+          $this->id($withincampusposts->last()),
+          $this->id($followedposts->last())
+        ]
       ]);
-
     } elseif ($postsettings->timeline_post_range == 'followedpost') {
+      $followedposts = $this->addKnownSharersProfile($this->getFollowedPosts($first));
       return response()->json([
         'message' => 'posts fetched',
         'postlistrange' => 'followedpost',
-        'timelineposts' => $followedposts->items(),
-        'followedpostnexturl' => $followedposts->nextPageUrl(),
+        'timelineposts' => $followedposts,
+        'links' => [
+          $this->id($followedposts->last()),
+        ],
         'status' => 200,
       ]);
-
     } else {
       return response()->json([
         'errmsg' => 'error occured while fetching post',
         'status' => 500,
       ]);
-
     }
   }
 
   /**
-  * function to return post settings of user
-  *
-  * @return \Illuminate\Http\Response
-  */
-  public function getPostSetting() {
+   * function to return 
+   * 
+   * @return Array
+   */
+  protected function id($model)
+  {
+    if (!$model) {
+      return 0;
+    }
+
+    return $model->id;
+  }
+
+
+  /**
+   * function to return post settings of user
+   *
+   * @return \Illuminate\Http\Response
+   */
+  public function getPostSetting()
+  {
     $postsettings = $this->profile->post_settings;
     if (is_null($postsettings) || empty($postsettings)) {
       return response()->json([
@@ -140,14 +172,16 @@ class PostController extends Controller
   }
 
   /**
-  * public function to update post_settings for user
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function updatePostSetting(Request $req) {
+   * public function to update post_settings for user
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function updatePostSetting(Request $req)
+  {
     $timeline_post_range = $req->timeline_post_range;
-    if (is_null($timeline_post_range) ||
+    if (
+      is_null($timeline_post_range) ||
       empty($timeline_post_range) ||
       !in_array($timeline_post_range, ['all', 'campus', 'followedpost'])
     ) {
@@ -175,15 +209,26 @@ class PostController extends Controller
   }
 
   /***
-  * function to get post of profiles that user is following
-  */
-  public function getFollowedPosts() {
+   * function to get post of profiles that user is following
+   */
+  public function getFollowedPosts($limit, $arr = [])
+  {
     $disallowedprofiles = array_merge(
       $this->muted_profiles_id,
       $this->user_blocked_profiles_id
     );
-    return $this->profile->followed_profiles_posts()
-    ->whereHas('profile', function (Builder $query) {
+    $query_arr = !is_null($limit) ?
+      [
+        'archived' => false,
+        ['id', '<', $limit],
+        'deleted' => false,
+      ] :
+      [
+        'archived' => false,
+        'deleted' => false,
+      ];
+
+    return Post::whereHas('profile', function (Builder $query) {
       $query->whereHas('user', function (Builder $query) {
         $query->where([
           'deleted' => false,
@@ -191,32 +236,47 @@ class PostController extends Controller
           'approved' => true,
         ]);
       });
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+      $query->whereHas('followers', function (Builder $query) {
+        $query->where('profile_follower_id', auth()->user()->profile->profile_id);
       });
-      $query->orDoesntHave('profile_settings');
+      $query->where(function (Builder $query) {
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
+      });
     })
-    ->where([
-      'archived' => false,
-      'deleted' => false,
-    ])
-    ->whereNotIn('postid', $this->blacklisted_posts)
-    ->with('profile.user')
-    ->whereNotIn('poster_id', $disallowedprofiles)
-    ->orderBy('id', 'desc')
-    ->simplePaginate(5);
+      ->whereNotIn('postid', $this->blacklisted_posts)
+      ->whereNotIn('poster_id', $disallowedprofiles)
+      ->whereNotIn('id', $arr)
+      ->where($query_arr)
+      ->with('profile.user')
+      ->orderBy('id', 'desc')
+      ->limit(5)
+      ->get();
   }
 
   /***
-  * function to get post by profiles from users campus
-  */
-  public function getWithinCampusPost($arr = []) {
-    $arr = array_merge($arr, $this->blacklisted_posts);
+   * function to get post by profiles from users campus
+   */
+  public function getWithinCampusPost($limit)
+  {
     $disallowedprofiles = array_merge(
       $this->followed_profiles_id,
       $this->muted_profiles_id,
       $this->user_blocked_profiles_id
     );
+    $query_arr = !is_null($limit) ?
+      [
+        'archived' => false,
+        ['id', '<', $limit],
+        'deleted' => false,
+      ] :
+      [
+        'archived' => false,
+        'deleted' => false,
+      ];
+
     return Post::whereHas('profile', function (Builder $query) {
       $query->whereHas('user', function (Builder $query) {
         $query->where([
@@ -225,33 +285,43 @@ class PostController extends Controller
           'approved' => true,
         ]);
       });
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+      $query->where(function (Builder $query) {
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
       });
-      $query->orDoesntHave('profile_settings');
       $query->where('campus', $this->profile->campus);
     })
-    ->where([
-      'archived' => false,
-      'deleted' => false,
-    ])
-    ->whereNotIn('postid', $arr)
-    ->whereNotIn('poster_id', $disallowedprofiles)
-    ->with('profile.user')
-    ->orderBy('id', 'desc')
-    ->simplePaginate(5);
+      ->where($query_arr)
+      ->whereNotIn('postid', $this->blacklisted_posts)
+      ->whereNotIn('poster_id', $disallowedprofiles)
+      ->with('profile.user')
+      ->orderBy('id', 'desc')
+      ->limit(5)
+      ->get();
   }
 
   /**
-  * function to get post generally
-  */
-  public function getAnyPost($arr = []) {
+   * function to get post generally
+   */
+  public function getAnyPost($limit)
+  {
     $disallowedprofiles = array_merge(
       $this->followed_profiles_id,
       $this->muted_profiles_id,
       $this->user_blocked_profiles_id
     );
-    $arr = array_merge($arr, $this->blacklisted_posts);
+    $query_arr = !is_null($limit) ?
+      [
+        'archived' => false,
+        ['id', '<', $limit],
+        'deleted' => false,
+      ] :
+      [
+        'archived' => false,
+        'deleted' => false,
+      ];
     return Post::whereHas('profile', function (Builder $query) {
       $query->whereHas('user', function (Builder $query) {
         $query->where([
@@ -260,58 +330,63 @@ class PostController extends Controller
           'approved' => true,
         ]);
       });
-      $query->WhereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+      /*$query->orWhereHas('followers', function (Builder $query) {
+        $query->where('profile_follower_id', auth()->user()->profile->profile_id);
+      });*/
+      $query->where(function (Builder $query) {
+        $query->WhereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
       });
-      $query->orDoesntHave('profile_settings');
     })
-    ->where([
-      'archived' => false,
-      'deleted' => false,
-    ])
-    ->whereNotIn('postid', $arr)
-    ->whereNotIn('poster_id', $disallowedprofiles)
-    ->with('profile.user')
-    ->orderBy('id', 'desc')
-    ->simplePaginate(5);
+      ->where($query_arr)
+      ->whereNotIn('postid', $this->blacklisted_posts)
+      ->whereNotIn('poster_id', $disallowedprofiles)
+      ->with('profile.user')
+      ->orderBy('id', 'desc')
+      ->limit(5)
+      ->get();
   }
   /**
-  * protected function by to get profiles you are following that shared a post
-  */
-  public function addKnownSharersProfile($data) {
+   * protected function by to get profiles you are following that shared a post
+   */
+  public function addKnownSharersProfile($data)
+  {
     if (is_null($data) || empty($data)) {
       return $data;
     }
     foreach ($data as $post) {
       $post->known_sharers_profile = $post->post_sharers_profile()
-      ->with('user')
-      ->whereHas('user', function (Builder $query) {
-        $query->where([
-          'deleted' => false,
-          'suspended' => false,
-          'approved' => true,
-        ]);
-      })
-      ->where(function (Builder $query) {
-        $query->whereHas('profile_settings', function (Builder $query) {
-          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
-        });
-        $query->orDoesntHave('profile_settings');
-      })
-      ->whereHas('followers', function (Builder $query) {
-        $query->where('profile_follower_id', $this->profile->profile_id);
-      })->limit(2)->get();
+        ->with('user')
+        ->whereHas('user', function (Builder $query) {
+          $query->where([
+            'deleted' => false,
+            'suspended' => false,
+            'approved' => true,
+          ]);
+        })
+        ->where(function (Builder $query) {
+          $query->whereHas('profile_settings', function (Builder $query) {
+            $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+          });
+          $query->orDoesntHave('profile_settings');
+        })
+        ->whereHas('followers', function (Builder $query) {
+          $query->where('profile_follower_id', $this->profile->profile_id);
+        })->limit(2)->get();
     }
     return $data;
   }
 
   /**
-  * Store a newly created resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function store(Request $request) {
+   * Store a newly created resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function store(Request $request)
+  {
     $userprofile = $this->profile;
     $usernumpost = $userprofile->num_posts;
     $usernumpost = $usernumpost < 0 ? 0 : $usernumpost;
@@ -394,16 +469,18 @@ class PostController extends Controller
   }
 
   /**
-  * this method handling uploading of profile image
-  *
-  * @return []
-  */
-  public function uploadPostPics() {
+   * this method handling uploading of profile image
+   *
+   * @return []
+   */
+  public function uploadPostPics()
+  {
     $profileid = $this->profile->profile_id;
     $images = [];
     $postimage = request()->post_image;
     $thumbpostimage = request()->thumb_post_image;
-    if (is_array($postimage) &&
+    if (
+      is_array($postimage) &&
       count($postimage) > 0 &&
       request()->hasFile('post_image') &&
       is_array($thumbpostimage) &&
@@ -437,12 +514,13 @@ class PostController extends Controller
   }
 
   /**
-  * Display the specified resource.
-  *
-  * @param  \App\\Illuminate\Http\Request $request
-  * @return \Illuminate\Http\Response
-  */
-  public function show(Request $request) {
+   * Display the specified resource.
+   *
+   * @param  \App\\Illuminate\Http\Request $request
+   * @return \Illuminate\Http\Response
+   */
+  public function show(Request $request)
+  {
     $postid = $request->postid;
     $userprofile = $this->profile;
     if (empty($postid) || is_null($postid)) {
@@ -463,33 +541,36 @@ class PostController extends Controller
     }
     if (Gate::allows('others_verify_block_status', $post->profile)) {
       return response()->json([
-        'errmsg' => "Post owner ${$post->profile->user->username} has you blocked",
+        'errmsg' => "Post owner {$post->profile->user->username} has you blocked",
         'status' => 412,
       ]);
     }
+
     return response()->json([
       'message' => 'fetch successful',
       'blockmsg' => Gate::allows('user_verify_block_status', $post->profile) ?
-      "{$post->profile->user->username} is blocked by you" : null,
+        "{$post->profile->user->username} is blocked by you" : null,
       'postdetails' => $post,
       'status' => 200,
     ]);
-
   }
 
   /**
-  * Update the specified resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function update(Request $request) {}
+   * Update the specified resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function update(Request $request)
+  {
+  }
   /**
-  * public function to get all posts of a particular profile
-  *
-  * @param  \Illuminate\Http\Request  $request
-  */
-  public function getProfilePosts(Request $req) {
+   * public function to get all posts of a particular profile
+   *
+   * @param  \Illuminate\Http\Request  $request
+   */
+  public function getProfilePosts(Request $req)
+  {
     $profileid = $req->profileid;
     $userprofile = $this->profile;
     if (is_null($profileid) || empty($profileid)) {
@@ -505,8 +586,8 @@ class PostController extends Controller
         'approved' => true,
       ]);
     })
-    ->with('user')
-    ->firstWhere('profile_id', $profileid);
+      ->with('user')
+      ->firstWhere('profile_id', $profileid);
     if (is_null($profile) || empty($profile)) {
       return response()->json([
         'errmsg' => 'not found',
@@ -515,11 +596,11 @@ class PostController extends Controller
     }
     if ($userprofile->profile_id == $profile->profile_id) {
       $profile_posts = $profile->posts()->with('profile.user')
-      ->where([
-        'deleted' => false,
-      ])
-      ->orderBy('id', 'desc')
-      ->simplePaginate(10);
+        ->where([
+          'deleted' => false,
+        ])
+        ->orderBy('id', 'desc')
+        ->simplePaginate(10);
     } else {
       if (Gate::allows('others_verify_block_status', $profile)) {
         return response()->json([
@@ -528,12 +609,12 @@ class PostController extends Controller
         ]);
       }
       $profile_posts = $profile->posts()->with('profile.user')
-      ->where([
-        'archived' => false,
-        'deleted' => false,
-      ])
-      ->orderBy('id', 'desc')
-      ->simplePaginate(10);
+        ->where([
+          'archived' => false,
+          'deleted' => false,
+        ])
+        ->orderBy('id', 'desc')
+        ->simplePaginate(10);
     }
     if (count($profile_posts) < 1) {
       return response()->json([
@@ -551,12 +632,13 @@ class PostController extends Controller
   }
 
   /**
-  * function to perform like action on post
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function postLikeAction(Request $request) {
+   * function to perform like action on post
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function postLikeAction(Request $request)
+  {
     $userprofile = $this->profile;
     $delete_repost = $create_repost = null;
     $postid = $request->postid;
@@ -571,7 +653,8 @@ class PostController extends Controller
       'archived' => false,
       'deleted' => false,
     ]);
-    if (is_null($post) || is_null($post->profile) || is_null($post->profile->user) || $post->profile->user->approved == false || $post->profile->user->deleted == true || $post->profile->user->suspended == true
+    if (
+      is_null($post) || is_null($post->profile) || is_null($post->profile->user) || $post->profile->user->approved == false || $post->profile->user->deleted == true || $post->profile->user->suspended == true
     ) {
       return response()->json([
         'errmsg' => 'could not find post it may have being removed,hidden or deleted',
@@ -629,16 +712,16 @@ class PostController extends Controller
       'postdetails' => $post,
       'status' => 200,
     ]);
-
   }
 
   /**
-  * function to perform share action on post
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function postShareAction(Request $request) {
+   * function to perform share action on post
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function postShareAction(Request $request)
+  {
     /*
         $repost_data = $post->fresh();
         $t = array_merge(
@@ -663,7 +746,8 @@ class PostController extends Controller
       'archived' => false,
       'deleted' => false,
     ]);
-    if (is_null($post) || is_null($post->profile) || is_null($post->profile->user) || $post->profile->user->approved == false || $post->profile->user->deleted == true || $post->profile->user->suspended == true
+    if (
+      is_null($post) || is_null($post->profile) || is_null($post->profile->user) || $post->profile->user->approved == false || $post->profile->user->deleted == true || $post->profile->user->suspended == true
     ) {
       return response()->json([
         'errmsg' => 'could not find post it may have being removed,hidden or deleted',
@@ -721,26 +805,27 @@ class PostController extends Controller
       'postdetails' => $post,
       'status' => 200,
     ]);
-
   }
 
   /**
-  * public function to delete file from storage
-  */
-  public function deleteFile($file) {
+   * public function to delete file from storage
+   */
+  public function deleteFile($file)
+  {
     if (File::exists($file)) {
       File::delete($file);
     }
   }
 
   /**
-  * to archive users sepcified  post
-  * when user archives a post only him/she can see it
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function archivePostAction(Request $req) {
+   * to archive users sepcified  post
+   * when user archives a post only him/she can see it
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function archivePostAction(Request $req)
+  {
     $userprofile = $this->profile;
     $toarchivepostid = $req->postid;
     if (is_null($toarchivepostid) || empty($toarchivepostid)) {
@@ -771,23 +856,26 @@ class PostController extends Controller
         'resetpost' => $userprofile->posts()->latest()->first(),
         'status' => 200,
       ])
-      : response()->json([
-        'message' => 'Post unarchived',
-        'status' => 200,
-      ]);
+        : response()->json([
+          'message' => 'Post unarchived',
+          'status' => 200,
+        ]);
     }
   }
 
   /**
-  * function to mute post from a particular profile
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function muteProfilePostAction(Request $req) {
+   * function to mute post from a particular profile
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function muteProfilePostAction(Request $req)
+  {
     $userprofile = $this->profile;
     $tomuteprofileid = $req->profileid;
-    if (is_null($tomuteprofileid) || empty($tomuteprofileid) ||
-      $tomuteprofileid == $userprofile->profile_id) {
+    if (
+      is_null($tomuteprofileid) || empty($tomuteprofileid) ||
+      $tomuteprofileid == $userprofile->profile_id
+    ) {
       return response()->json([
         'errmsg' => 'You did something wrong please try again',
         'status' => 400,
@@ -801,7 +889,8 @@ class PostController extends Controller
       ]);
     }
 
-    if (is_null($userprofile->post_settings) ||
+    if (
+      is_null($userprofile->post_settings) ||
       empty($userprofile->post_settings) ||
       is_null($userprofile->post_settings->muted_profiles) ||
       empty($userprofile->post_settings->muted_profiles)
@@ -834,11 +923,12 @@ class PostController extends Controller
   }
 
   /**
-  * function to blacklist a particular post for the user
-  *  @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function blackListPostAction(Request $req) {
+   * function to blacklist a particular post for the user
+   *  @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function blackListPostAction(Request $req)
+  {
     $userprofile = $this->profile;
     $toblacklistpostid = $req->postid;
     if (is_null($toblacklistpostid) || empty($toblacklistpostid)) {
@@ -847,7 +937,8 @@ class PostController extends Controller
         'status' => 400,
       ]);
     }
-    if (is_null($userprofile->post_settings) ||
+    if (
+      is_null($userprofile->post_settings) ||
       empty($userprofile->post_settings) ||
       is_null($userprofile->post_settings->blacklisted_posts) ||
       empty($userprofile->post_settings->blacklisted_posts)
@@ -877,13 +968,13 @@ class PostController extends Controller
       'message' => $msg,
       'status' => 200,
     ]);
-
   }
   /**
-  * @param  \Illuminate\Http\Request  $request
-  * public function to get likes_list for post starts here
-  */
-  public function getPostLikesList(Request $req) {
+   * @param  \Illuminate\Http\Request  $request
+   * public function to get likes_list for post starts here
+   */
+  public function getPostLikesList(Request $req)
+  {
     $postid = $req->postid;
     $userprofile = $this->profile;
     if (is_null($postid) || empty($postid)) {
@@ -913,38 +1004,38 @@ class PostController extends Controller
 
     if ($userprofile->profile_id == $post->poster_id) {
       $likers_list = $post->postlikes()
-      ->whereHas('profile', function (Builder $query) {
-        $query->whereHas('user', function (Builder $query) {
-          $query->where([
-            'deleted' => false,
-            'suspended' => false,
-            'approved' => true,
-          ]);
-        });
-      })
-      ->with('profile.user')
-      ->orderBy('id', 'desc')
-      ->simplePaginate(10);
+        ->whereHas('profile', function (Builder $query) {
+          $query->whereHas('user', function (Builder $query) {
+            $query->where([
+              'deleted' => false,
+              'suspended' => false,
+              'approved' => true,
+            ]);
+          });
+        })
+        ->with('profile.user')
+        ->orderBy('id', 'desc')
+        ->simplePaginate(10);
     } else {
       $likers_list = $post->postlikes()
-      ->whereHas('profile', function (Builder $query) {
-        $query->whereHas('user', function (Builder $query) {
-          $query->where([
-            'deleted' => false,
-            'suspended' => false,
-            'approved' => true,
-          ]);
-        });
-        $query->where(function (Builder $query) {
-          $query->whereHas('profile_settings', function (Builder $query) {
-            $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        ->whereHas('profile', function (Builder $query) {
+          $query->whereHas('user', function (Builder $query) {
+            $query->where([
+              'deleted' => false,
+              'suspended' => false,
+              'approved' => true,
+            ]);
           });
-          $query->orDoesntHave('profile_settings');
-        });
-      })
-      ->with('profile.user')
-      ->orderBy('id', 'desc')
-      ->simplePaginate(10);
+          $query->where(function (Builder $query) {
+            $query->whereHas('profile_settings', function (Builder $query) {
+              $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+            });
+            $query->orDoesntHave('profile_settings');
+          });
+        })
+        ->with('profile.user')
+        ->orderBy('id', 'desc')
+        ->simplePaginate(10);
     }
     if (count($likers_list) < 1) {
       return response()->json([
@@ -958,14 +1049,14 @@ class PostController extends Controller
       'likes_list' => $likers_list->items(),
       'next_page_url' => $likers_list->nextPageUrl(),
     ]);
-
   }
 
   /**
-  * @param  \Illuminate\Http\Request  $request
-  * public function to get shares_list for post starts here
-  */
-  public function getPostSharesList(Request $req) {
+   * @param  \Illuminate\Http\Request  $request
+   * public function to get shares_list for post starts here
+   */
+  public function getPostSharesList(Request $req)
+  {
     $postid = $req->postid;
     $userprofile = $this->profile;
     if (is_null($postid) || empty($postid)) {
@@ -995,39 +1086,38 @@ class PostController extends Controller
 
     if ($userprofile->profile_id == $post->poster_id) {
       $shares_list = $post->postshares()
-      ->whereHas('profile', function (Builder $query) {
-        $query->whereHas('user', function (Builder $query) {
-          $query->where([
-            'deleted' => false,
-            'suspended' => false,
-            'approved' => true,
-          ]);
-        });
-
-      })
-      ->with('profile.user')
-      ->orderBy('id', 'desc')
-      ->simplePaginate(10);
+        ->whereHas('profile', function (Builder $query) {
+          $query->whereHas('user', function (Builder $query) {
+            $query->where([
+              'deleted' => false,
+              'suspended' => false,
+              'approved' => true,
+            ]);
+          });
+        })
+        ->with('profile.user')
+        ->orderBy('id', 'desc')
+        ->simplePaginate(10);
     } else {
       $shares_list = $post->postshares()
-      ->whereHas('profile', function (Builder $query) {
-        $query->whereHas('user', function (Builder $query) {
-          $query->where([
-            'deleted' => false,
-            'suspended' => false,
-            'approved' => true,
-          ]);
-        });
-        $query->where(function (Builder $query) {
-          $query->whereHas('profile_settings', function (Builder $query) {
-            $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        ->whereHas('profile', function (Builder $query) {
+          $query->whereHas('user', function (Builder $query) {
+            $query->where([
+              'deleted' => false,
+              'suspended' => false,
+              'approved' => true,
+            ]);
           });
-          $query->orDoesntHave('profile_settings');
-        });
-      })
-      ->with('profile.user')
-      ->orderBy('id', 'desc')
-      ->simplePaginate(10);
+          $query->where(function (Builder $query) {
+            $query->whereHas('profile_settings', function (Builder $query) {
+              $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+            });
+            $query->orDoesntHave('profile_settings');
+          });
+        })
+        ->with('profile.user')
+        ->orderBy('id', 'desc')
+        ->simplePaginate(10);
     }
 
     if (count($shares_list) < 1) {
@@ -1045,11 +1135,12 @@ class PostController extends Controller
   }
 
   /**
-  * public function to search post for words
-  *
-  * @param  \Illuminate\Http\Request  $request
-  */
-  public function searchPosts(Request $req) {
+   * public function to search post for words
+   *
+   * @param  \Illuminate\Http\Request  $request
+   */
+  public function searchPosts(Request $req)
+  {
     $searchword = $req->word;
     if (is_null($searchword) || empty($searchword)) {
       return response()->json([
@@ -1058,12 +1149,12 @@ class PostController extends Controller
       ]);
     }
     $result_posts = Post::with('profile.user')->where('post_text', 'like', "%$searchword%")
-    ->where([
-      'deleted' => false,
-      'archived' => false,
-    ])
+      ->where([
+        'deleted' => false,
+        'archived' => false,
+      ])
 
-    ->simplePaginate(10);
+      ->simplePaginate(10);
     if (count($result_posts) < 1) {
       return response()->json([
         'errmsg' => "no results for search word : $searchword",
@@ -1079,12 +1170,13 @@ class PostController extends Controller
   }
 
   /**
-  * set deleted to true for post
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function destroy(Request $request) {
+   * set deleted to true for post
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function destroy(Request $request)
+  {
     $postid = $request->postid;
     $userprofile = $this->profile;
     if (empty($postid) || is_null($postid)) {
@@ -1113,16 +1205,16 @@ class PostController extends Controller
       ]),
       'status' => 200,
     ]);
-
   }
 
   /**
-  * Remove the specified resource from storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function destroyActual(Request $request) {
+   * Remove the specified resource from storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function destroyActual(Request $request)
+  {
     $postid = $request->postid;
     $userprofile = $this->profile;
     if (empty($postid) || is_null($postid)) {
@@ -1155,6 +1247,5 @@ class PostController extends Controller
       'resetpost' => $userprofile->posts()->latest()->first(),
       'status' => 200,
     ]);
-
   }
 }

@@ -13,12 +13,13 @@ class UserController extends Controller
 {
 
   /**
-  * Instantiate a new controller    instance.
-  * * @return void
-  */
-  public function __construct() {
+   * Instantiate a new controller    instance.
+   * * @return void
+   */
+  public function __construct()
+  {
     $this->middleware('jwt.verify')
-    ->only(['show', 'update', 'destory']);
+      ->only(['show', 'update', 'destory']);
     if (request()->missing('mobile_confirmed') || request()->mobile_confirmed != "ultimatrix") {
       //auth()->logout(true);
       return response()->json([
@@ -30,21 +31,23 @@ class UserController extends Controller
   }
 
   /**
-  * Display a listing of the resource.
-  *
-  * @return \Illuminate\Http\Response
-  */
-  public function index() {
+   * Display a listing of the resource.
+   *
+   * @return \Illuminate\Http\Response
+   */
+  public function index()
+  {
     //
   }
 
   /**
-  * Store a newly created resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function store(Request $request) {
+   * Store a newly created resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function store(Request $request)
+  {
     $messages = [
       'username.regex' => 'username can only contain letters and underscores',
     ];
@@ -117,16 +120,16 @@ class UserController extends Controller
           'status' => 500,
         ]);
       }
-
     }
   }
 
   /**
-  * signs the user in
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function login(Request $request) {
+   * signs the user in
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function login(Request $request)
+  {
     if (auth()->user()) {
       $token = auth()->getToken(auth()->user());
       // $token = "$token";
@@ -155,10 +158,11 @@ class UserController extends Controller
   }
 
   /**
-  * function to return authenticated user
-  * @param
-  */
-  public function getAuthUser($user, $token) {
+   * function to return authenticated user
+   * @param
+   */
+  public function getAuthUser($user, $token)
+  {
     $res = new UserResource($user);
     $res->token = "$token";
     $profile = $user->profile;
@@ -170,16 +174,16 @@ class UserController extends Controller
       'posts' => $profile->posts()->latest()->first(),
       'status' => 302,
     ]);
-
   }
 
   /**
-  * public function to add users device token
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function addDeviceToken(Request $req) {
+   * public function to add users device token
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function addDeviceToken(Request $req)
+  {
     $user = auth()->user();
     $token = $req->device_token;
     if (!$token) {
@@ -204,25 +208,27 @@ class UserController extends Controller
       'message' => 'token saved',
       'status' => 200,
     ]);
-
   }
 
   /**
-  * Display the specified resource.
-  *
-  * @param  \App\User  $user
-  * @return \Illuminate\Http\Response
-  */
-  public function show(User $user) {}
+   * Display the specified resource.
+   *
+   * @param  \App\User  $user
+   * @return \Illuminate\Http\Response
+   */
+  public function show(User $user)
+  {
+  }
 
   /**
-  * Update the specified resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @param  \App\User  $user
-  * @return \Illuminate\Http\Response
-  */
-  public function update(Request $request) {
+   * Update the specified resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @param  \App\User  $user
+   * @return \Illuminate\Http\Response
+   */
+  public function update(Request $request)
+  {
     /*return $user = auth()->getUser()->device_token;*/
     $validate = Validator::make($request->all(), [
       'username' => [
@@ -281,17 +287,16 @@ class UserController extends Controller
           'status' => 500,
         ]);
       }
-
     }
-
   }
   /**
-  * sending notification
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function sendNotification(Request $request) {
+   * sending notification
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function sendNotification(Request $request)
+  {
     return $user = auth()->user();
 
     $data = [
@@ -315,10 +320,11 @@ class UserController extends Controller
   }
 
   /**
-  * Remove the specified resource from storage.
-  * @return \Illuminate\Http\Response
-  */
-  public function destroy() {
+   * Remove the specified resource from storage.
+   * @return \Illuminate\Http\Response
+   */
+  public function destroy()
+  {
     $user = auth()->user();
     if ($user == null) {
       return response()->json([
@@ -338,6 +344,5 @@ class UserController extends Controller
         'status' => 500,
       ]);
     }
-
   }
 }
