@@ -163,11 +163,10 @@ class UserController extends Controller
    */
   public function getAuthUser($user, $token)
   {
-    $res = new UserResource($user);
-    $res->token = "$token";
+    $user->token = $token;
     $profile = $user->profile;
     return response()->json([
-      'user' => $res,
+      'user' => $user,
       'profile' => $profile,
       'meet_setting' => $user->meet_setting,
       'post_settings' => $profile->post_settings,

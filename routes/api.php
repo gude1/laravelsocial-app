@@ -36,7 +36,7 @@ Route::prefix('auth')->group(function () {
 /**
  * user controller route
  */
-Route::match(['get', 'post'], 'user/adddevictoken', 'UserController@addDeviceToken');
+Route::match(['get', 'post'], 'user/adddevicetoken', 'UserController@addDeviceToken');
 Route::match(['get', 'post'], 'user/sendnotification', 'UserController@sendNotification');
 Route::match(['get', 'delete'], 'userdelete/', 'UserController@destroy');
 Route::match(['get', 'patch', 'put'], 'user/{user}', 'UserController@update');

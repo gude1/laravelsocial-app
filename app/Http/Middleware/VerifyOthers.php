@@ -8,13 +8,14 @@ use Closure;
 class VerifyOthers
 {
   /**
-  * Handle an incoming request.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @param  \Closure  $next
-  * @return mixed
-  */
-  public function handle($request, Closure $next) {
+   * Handle an incoming request.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @param  \Closure  $next
+   * @return mixed
+   */
+  public function handle($request, Closure $next)
+  {
     /*UserActivity::saveActivity();
     return $next($request);*/
     $authuser = auth()->user();
