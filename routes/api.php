@@ -104,17 +104,17 @@ Route::match(['get', 'post'], 'postcommentreplydelete', 'PostCommentReplyControl
 /**
  *PrivateChat Controller
  */
-Route::match(['get', 'post'], 'privatechatlist', 'PrivateChatController@index');
-Route::match(['get', 'post'], 'sendprivatechat', 'PrivateChatController@store');
-Route::match(['get', 'post'], 'showprivatechat', 'PrivateChatController@show');
+Route::match(['get', 'post'], 'privatechatlist', 'PrivateChat2Controller@index');
+Route::match(['get', 'post'], 'sendprivatechat', 'PrivateChat2Controller@store');
+Route::match(['get', 'post'], 'showprivatechat', 'PrivateChat2Controller@show');
 Route::match(['get', 'post'], 'showprivatechatandupdateread', 'PrivateChatController@showAndUpdateCreateChatRead');
-Route::match(['get', 'post'], 'setprivatechatread', 'PrivateChatController@setChatRead');
+Route::match(['get', 'post'], 'setprivatechatread', 'PrivateChat2Controller@setChatToRead');
 Route::match(['get', 'post'], 'setprivatechatarrread', 'PrivateChatController@setReqChatArrayToRead');
 Route::match(['get', 'post'], 'deleteaprivatechat', 'PrivateChatController@destroy');
 Route::match(['get', 'post'], 'deleteprivatechat', 'PrivateChatController@deletePrivateChatList');
-Route::match(['get', 'post'], 'getaprivatechatinfo', 'PrivateChatController@getAPrivateChatInfo');
+Route::match(['get', 'post'], 'getaprivatechatinfo', 'PrivateChat2Controller@getAPrivateChatInfo');
 Route::match(['get', 'post'], 'searchprivatechatlist', 'PrivateChatController@searchPrivateChatList');
-Route::match(['get', 'post'], 'deleteaprivatechat', 'PrivateChatController@deleteAPrivateChat');
+Route::match(['get', 'post'], 'deleteaprivatechat', 'PrivateChat2Controller@deleteAPrivateChat');
 
 /**
  *MeetupRequest Controller

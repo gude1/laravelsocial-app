@@ -20,10 +20,11 @@ class PrivateChatController extends Controller
   protected $user_blocked_profiles_id = [];
 
   /**
-  *Instantiate a new controller instance.
-  * @return void
-  */
-  public function __construct() {
+   *Instantiate a new controller instance.
+   * @return void
+   */
+  public function __construct()
+  {
     $this->middleware('jwt.verify');
     $this->middleware('app.verify');
     $this->user = auth()->user();
@@ -39,9 +40,10 @@ class PrivateChatController extends Controller
   }
 
   /**
-  * protected function to sort  according to id from lowest to highest in db
-  */
-  protected function idSort($data) {
+   * protected function to sort  according to id from lowest to highest in db
+   */
+  protected function idSort($data)
+  {
     usort($data, function ($item1, $item2) {
       if (is_object($item1) && is_object($item2)) {
         return $item1->id - $item2->id;
@@ -53,11 +55,12 @@ class PrivateChatController extends Controller
   }
 
   /**
-  * returns profile chat list
-  *
-  * @return \Illuminate\Http\Response
-  */
-  public function index() {
+   * returns profile chat list
+   *
+   * @return \Illuminate\Http\Response
+   */
+  public function index()
+  {
     $userprofile = $this->profile;
     $limiter = request('limiter');
     $black_list = request('black_list');
@@ -67,39 +70,39 @@ class PrivateChatController extends Controller
       $min_limiter = $this->clean_input($limiter[1]);
       $sub = "select create_chatid from private_chats where id > '$max_limiter' and (sender_id = '{$userprofile->profile_id}' or receiver_id = '{$userprofile->profile_id}')";
       $chat_list = DB::table(DB::raw("private_chats"))
-      ->select('create_chatid')
-      ->whereNotIn('create_chatid', [DB::raw($sub)])
-      ->whereNotIn('create_chatid', $black_list)
-      ->where(function ($query) {
-        $query->where([
-          'sender_id' => $this->profile->profile_id,
-          'sender_deleted' => false,
-        ])->orWhere([
-          ['receiver_id', '=', $this->profile->profile_id],
-          ['receiver_deleted', '=', false],
-        ]);
-      })
-      ->orderBy('id', 'desc')
-      ->groupBy('create_chatid')
-      ->limit(10)
-      ->get();
+        ->select('create_chatid')
+        ->whereNotIn('create_chatid', [DB::raw($sub)])
+        ->whereNotIn('create_chatid', $black_list)
+        ->where(function ($query) {
+          $query->where([
+            'sender_id' => $this->profile->profile_id,
+            'sender_deleted' => false,
+          ])->orWhere([
+            ['receiver_id', '=', $this->profile->profile_id],
+            ['receiver_deleted', '=', false],
+          ]);
+        })
+        ->orderBy('id', 'desc')
+        ->groupBy('create_chatid')
+        ->limit(10)
+        ->get();
     } else {
       $sub = PrivateChat::orderBy('id', 'desc');
       $chat_list = DB::table(DB::raw("({$sub->toSql()})"))
-      ->select('create_chatid')
-      ->where(function ($query) {
-        $query->where([
-          'sender_id' => $this->profile->profile_id,
-          'sender_deleted' => false,
-        ])->orWhere([
-          ['receiver_id', '=', $this->profile->profile_id],
-          ['receiver_deleted', '=', false],
-        ]);
-      })
-      ->groupBy('create_chatid')
-      ->orderBy('id', 'desc')
-      ->limit(10)
-      ->get();
+        ->select('create_chatid')
+        ->where(function ($query) {
+          $query->where([
+            'sender_id' => $this->profile->profile_id,
+            'sender_deleted' => false,
+          ])->orWhere([
+            ['receiver_id', '=', $this->profile->profile_id],
+            ['receiver_deleted', '=', false],
+          ]);
+        })
+        ->groupBy('create_chatid')
+        ->orderBy('id', 'desc')
+        ->limit(10)
+        ->get();
     }
     if (count($chat_list) < 1) {
       return response()->json([
@@ -127,9 +130,10 @@ class PrivateChatController extends Controller
   }
 
   /**
-  * cleans data
-  */
-  protected function clean_input($data) {
+   * cleans data
+   */
+  protected function clean_input($data)
+  {
     if (empty($data) || is_null($data)) {
       return $data;
     }
@@ -141,14 +145,14 @@ class PrivateChatController extends Controller
   }
 
   /**
-  * Store a newly created resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function store(Request $request) {
+   * Store a newly created resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function store(Request $request)
+  {
     $userprofile = $this->profile;
-    //CreateChat::truncate();
     //PrivateChat::truncate();
     $validate = Validator::make($request->all(), [
       'chat_msg' => 'sometimes|bail|required|between:1,300|string',
@@ -180,8 +184,8 @@ class PrivateChatController extends Controller
         'approved' => true,
       ]);
     })
-    ->with('user')
-    ->firstWhere("profile_id", $request->receiver_id);
+      ->with('user')
+      ->firstWhere("profile_id", $request->receiver_id);
 
     if (is_null($receiver_profile) || empty($receiver_profile)) {
       return response()->json([
@@ -208,11 +212,11 @@ class PrivateChatController extends Controller
       'profile_id1' => request()->receiver_id,
       'profile_id2' => $this->profile->profile_id,
     ])
-    ->orWhere([
-      ['profile_id1', '=', $this->profile->profile_id],
-      ['profile_id2', '=', request()->receiver_id],
-    ])
-    ->first();
+      ->orWhere([
+        ['profile_id1', '=', $this->profile->profile_id],
+        ['profile_id2', '=', request()->receiver_id],
+      ])
+      ->first();
 
     //to set messages received by message sender
     if (is_null($created_chat) || empty($created_chat)) {
@@ -252,7 +256,7 @@ class PrivateChatController extends Controller
     $uploadedchat_pics_len = count($uploadedchat_pics);
     $request_chat_pics_len = count($request->only('chat_pics'));
     $warningmsg = $uploadedchat_pics_len != $request_chat_pics_len ?
-    "{$uploadedchat_pics_len}/{$request_chat_pics_len} uploaded" : null;
+      "{$uploadedchat_pics_len}/{$request_chat_pics_len} uploaded" : null;
     $data['chat_pics'] = json_encode($uploadedchat_pics);
     $data['private_chatid'] = md5(rand(2452, 1632662727));
     $data['sender_id'] = $userprofile->profile_id;
@@ -301,20 +305,21 @@ class PrivateChatController extends Controller
       'warning_msg' => $warningmsg,
       'status' => 200,
     ]);
-
   }
 
   /**
-  * this method handling uploading of chat image
-  *
-  * @return []
-  */
-  public function uploadChatPics() {
+   * this method handling uploading of chat image
+   *
+   * @return []
+   */
+  public function uploadChatPics()
+  {
     $profileid = $this->profile->profile_id;
     $images = [];
     $chatpics = request()->chat_pics;
     $thumbchatpics = request()->thumb_chat_pics;
-    if (is_array($chatpics) &&
+    if (
+      is_array($chatpics) &&
       count($thumbchatpics) > 0 &&
       request()->hasFile('chat_pics') &&
       is_array($thumbchatpics) &&
@@ -349,12 +354,13 @@ class PrivateChatController extends Controller
   }
 
   /**
-  * Display the specified resource.
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function show(Request $req) {
+   * Display the specified resource.
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function show(Request $req)
+  {
     //return CreateChat::all();
     $userprofile = $this->profile;
     $togetchatid = $req->create_chatid;
@@ -368,7 +374,7 @@ class PrivateChatController extends Controller
       'profile_id1' => $userprofile->profile_id,
       'profile_id2' => $userprofile->profile_id,
     ])->where('chatid', $togetchatid)
-    ->first();
+      ->first();
     if (is_null($created_chat) || empty($created_chat)) {
       return response()->json([
         'errmsg' => 'chat not found',
@@ -376,21 +382,21 @@ class PrivateChatController extends Controller
       ]);
     }
     $partnerprofile = $created_chat->profile_id1 == $userprofile->profile_id ?
-    $created_chat->receipient_profile()->with('user')->first() : $created_chat->initiator_profile()->with('user')->first();
+      $created_chat->receipient_profile()->with('user')->first() : $created_chat->initiator_profile()->with('user')->first();
 
     $private_chats = $created_chat->private_chats()
-    ->where(function (Builder $query) {
-      $query->where([
-        'sender_id' => $this->profile->profile_id,
-        'sender_deleted' => false,
-      ])->orWhere([
-        ['receiver_id', '=', $this->profile->profile_id],
-        ['receiver_deleted', '=', false],
-      ]);
-    })
-    ->orderBy('id', 'desc')
-    ->limit(100)
-    ->get();
+      ->where(function (Builder $query) {
+        $query->where([
+          'sender_id' => $this->profile->profile_id,
+          'sender_deleted' => false,
+        ])->orWhere([
+          ['receiver_id', '=', $this->profile->profile_id],
+          ['receiver_deleted', '=', false],
+        ]);
+      })
+      ->orderBy('id', 'desc')
+      ->limit(100)
+      ->get();
     if (count($private_chats) < 1) {
       return response()->json([
         'errmsg' => 'no chats yet',
@@ -408,17 +414,16 @@ class PrivateChatController extends Controller
         if ($item->read != 'true') {
           $to_set_last_fetch_arr[] = $item->id;
         }
-
       }
     }
     //update reads to delivered  for chat received by userprofile
     $update_to_delivered = null;
     if (count($to_set_delivered_ids) > 0) {
       $update_to_delivered = PrivateChat::whereIn('id', $to_set_delivered_ids)
-      ->update([
-        'read' => 'delivered',
-        'updated_at' => time(),
-      ]);
+        ->update([
+          'read' => 'delivered',
+          'updated_at' => time(),
+        ]);
     }
     //update createchat last_fetch_arr for  auth userprofile
     $update_last_fetch = null;
@@ -435,7 +440,6 @@ class PrivateChatController extends Controller
         'profile_id1_last_fetch_arr' => json_encode($to_set_last_fetch_arr),
         'updated_at' => time(),
       ]);
-
     } else if ($created_chat->profile_id2 == $userprofile->profile_id) {
       $to_set_last_fetch_arr = array_diff(
         $to_set_last_fetch_arr,
@@ -465,13 +469,13 @@ class PrivateChatController extends Controller
       'last_fetch_arr' => $to_set_last_fetch_arr,
       'status' => 200,
     ]);
-
   }
 
   /**
-  * to display goods starts here
-  */
-  protected function fetchChats($create_chatid) {
+   * to display goods starts here
+   */
+  protected function fetchChats($create_chatid)
+  {
     $userprofile = $this->profile;
     $togetchatid = $create_chatid;
     if (is_null($togetchatid) || empty($togetchatid)) {
@@ -481,7 +485,7 @@ class PrivateChatController extends Controller
       'profile_id1' => $userprofile->profile_id,
       'profile_id2' => $userprofile->profile_id,
     ])->where('chatid', $togetchatid)
-    ->first();
+      ->first();
     if (is_null($created_chat) || empty($created_chat)) {
       return [
         'private_chats' => [],
@@ -489,21 +493,21 @@ class PrivateChatController extends Controller
       ];
     }
     $partnerprofile = $created_chat->profile_id1 == $userprofile->profile_id ?
-    $created_chat->receipient_profile()->with('user')->first() : $created_chat->initiator_profile()->with('user')->first();
+      $created_chat->receipient_profile()->with('user')->first() : $created_chat->initiator_profile()->with('user')->first();
 
     $private_chats = $created_chat->private_chats()
-    ->where(function (Builder $query) {
-      $query->where([
-        'sender_id' => $this->profile->profile_id,
-        'sender_deleted' => false,
-      ])->orWhere([
-        ['receiver_id', '=', $this->profile->profile_id],
-        ['receiver_deleted', '=', false],
-      ]);
-    })
-    ->orderBy('id', 'desc')
-    ->limit(100)
-    ->get();
+      ->where(function (Builder $query) {
+        $query->where([
+          'sender_id' => $this->profile->profile_id,
+          'sender_deleted' => false,
+        ])->orWhere([
+          ['receiver_id', '=', $this->profile->profile_id],
+          ['receiver_deleted', '=', false],
+        ]);
+      })
+      ->orderBy('id', 'desc')
+      ->limit(100)
+      ->get();
     if (count($private_chats) < 1) {
       return [
         'private_chats' => [],
@@ -522,17 +526,16 @@ class PrivateChatController extends Controller
         if ($item->read != 'true') {
           $to_set_last_fetch_arr[] = $item->id;
         }
-
       }
     }
     //update reads to delivered  for chat received by userprofile
     $update_to_delivered = null;
     if (count($to_set_delivered_ids) > 0) {
       $update_to_delivered = PrivateChat::whereIn('id', $to_set_delivered_ids)
-      ->update([
-        'read' => 'delivered',
-        'updated_at' => time(),
-      ]);
+        ->update([
+          'read' => 'delivered',
+          'updated_at' => time(),
+        ]);
     }
     //update createchat last_fetch_arr for  auth userprofile
     $update_last_fetch = null;
@@ -549,7 +552,6 @@ class PrivateChatController extends Controller
         'profile_id1_last_fetch_arr' => json_encode($to_set_last_fetch_arr),
         'updated_at' => time(),
       ]);
-
     } else if ($created_chat->profile_id2 == $userprofile->profile_id) {
       $to_set_last_fetch_arr = array_diff(
         $to_set_last_fetch_arr,
@@ -581,12 +583,13 @@ class PrivateChatController extends Controller
   }
 
   /**
-  * Display chat messages for chatid and also updated read
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function showAndUpdateCreateChatRead(Request $req) {
+   * Display chat messages for chatid and also updated read
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function showAndUpdateCreateChatRead(Request $req)
+  {
     $userprofile = $this->profile;
     $togetchatid = $req->create_chatid;
     if ($req->findpartnerchat == 'true') {
@@ -594,10 +597,10 @@ class PrivateChatController extends Controller
         'profile_id1' => $userprofile->profile_id,
         'profile_id2' => $req->partner_id,
       ])
-      ->orWhere([
-        ['profile_id1', '=', $req->partner_id],
-        ['profile_id2', '=', $userprofile->profile_id],
-      ])->first();
+        ->orWhere([
+          ['profile_id1', '=', $req->partner_id],
+          ['profile_id2', '=', $userprofile->profile_id],
+        ])->first();
       if (!$togetchatid) {
         return response()->json([
           'errmsg' => 'Could not fetch chats',
@@ -618,7 +621,7 @@ class PrivateChatController extends Controller
       'profile_id1' => $userprofile->profile_id,
       'profile_id2' => $userprofile->profile_id,
     ])->where('chatid', $togetchatid)
-    ->first();
+      ->first();
     if (is_null($created_chat) || empty($created_chat)) {
       return response()->json([
         'errmsg' => 'chat not found',
@@ -626,25 +629,10 @@ class PrivateChatController extends Controller
       ]);
     }
     $partnerprofile = $created_chat->profile_id1 == $userprofile->profile_id ?
-    $created_chat->receipient_profile()->with('user')->first() : $created_chat->initiator_profile()->with('user')->first();
+      $created_chat->receipient_profile()->with('user')->first() : $created_chat->initiator_profile()->with('user')->first();
 
     if ($offset < 1) {
       $private_chats = $created_chat->private_chats()
-      ->where(function (Builder $query) {
-        $query->where([
-          'sender_id' => $this->profile->profile_id,
-          'sender_deleted' => false,
-        ])->orWhere([
-          ['receiver_id', '=', $this->profile->profile_id],
-          ['receiver_deleted', '=', false],
-        ]);
-      })
-      ->orderBy('id', 'desc')
-      ->limit(100)
-      ->get();
-    } else {
-      if ($offset_operator == "<") {
-        $private_chats = $created_chat->private_chats()
         ->where(function (Builder $query) {
           $query->where([
             'sender_id' => $this->profile->profile_id,
@@ -654,24 +642,39 @@ class PrivateChatController extends Controller
             ['receiver_deleted', '=', false],
           ]);
         })
-        ->where('id', $offset_operator, $offset)
         ->orderBy('id', 'desc')
         ->limit(100)
         ->get();
+    } else {
+      if ($offset_operator == "<") {
+        $private_chats = $created_chat->private_chats()
+          ->where(function (Builder $query) {
+            $query->where([
+              'sender_id' => $this->profile->profile_id,
+              'sender_deleted' => false,
+            ])->orWhere([
+              ['receiver_id', '=', $this->profile->profile_id],
+              ['receiver_deleted', '=', false],
+            ]);
+          })
+          ->where('id', $offset_operator, $offset)
+          ->orderBy('id', 'desc')
+          ->limit(100)
+          ->get();
       } else {
         $private_chats = $created_chat->private_chats()
-        ->where(function (Builder $query) {
-          $query->where([
-            'sender_id' => $this->profile->profile_id,
-            'sender_deleted' => false,
-          ])->orWhere([
-            ['receiver_id', '=', $this->profile->profile_id],
-            ['receiver_deleted', '=', false],
-          ]);
-        })
-        ->where('id', $offset_operator, $offset)
-        ->limit(100)
-        ->get();
+          ->where(function (Builder $query) {
+            $query->where([
+              'sender_id' => $this->profile->profile_id,
+              'sender_deleted' => false,
+            ])->orWhere([
+              ['receiver_id', '=', $this->profile->profile_id],
+              ['receiver_deleted', '=', false],
+            ]);
+          })
+          ->where('id', $offset_operator, $offset)
+          ->limit(100)
+          ->get();
       }
     }
     if (count($private_chats) < 1) {
@@ -691,17 +694,16 @@ class PrivateChatController extends Controller
         if ($item->read != 'true') {
           $to_set_last_fetch_arr[] = $item->id;
         }
-
       }
     }
     //update reads to delivered  for chat received by userprofile
     $update_to_delivered = null;
     if (count($to_set_delivered_ids) > 0) {
       $update_to_delivered = PrivateChat::whereIn('id', $to_set_delivered_ids)
-      ->update([
-        'read' => 'delivered',
-        'updated_at' => time(),
-      ]);
+        ->update([
+          'read' => 'delivered',
+          'updated_at' => time(),
+        ]);
     }
 
     //update read createchat last_fetch_arr and update createchat last_fetch_arr for  auth userprofile
@@ -723,7 +725,6 @@ class PrivateChatController extends Controller
           'updated_at' => time(),
         ]);
       }
-
     } else if ($created_chat->profile_id2 == $userprofile->profile_id) {
       //code to update read of previous create chat last_fetch
       $update_last_fetch_read = $this->setChatArrayToRead(
@@ -760,12 +761,13 @@ class PrivateChatController extends Controller
   }
 
   /**
-  * public function to set read to true for chat msgs sent to users
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function setChatRead(Request $req) {
+   * public function to set read to true for chat msgs sent to users
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function setChatRead(Request $req)
+  {
     $userprofile = $this->profile;
     $togetchatid = $req->create_chatid;
     if (is_null($togetchatid) || empty($togetchatid)) {
@@ -778,7 +780,7 @@ class PrivateChatController extends Controller
       'profile_id1' => $userprofile->profile_id,
       'profile_id2' => $userprofile->profile_id,
     ])->where('chatid', $togetchatid)
-    ->first();
+      ->first();
     if (is_null($created_chat) || empty($created_chat)) {
       return response()->json([
         'errmsg' => 'chat not found',
@@ -789,11 +791,11 @@ class PrivateChatController extends Controller
     $isprofileid1 = false;
     if ($created_chat->profile_id1 == $userprofile->profile_id) {
       $to_set_read_arr = is_null($created_chat->profile_id1_last_fetch_arr) ?
-      [] : json_decode($created_chat->profile_id1_last_fetch_arr, true);
+        [] : json_decode($created_chat->profile_id1_last_fetch_arr, true);
       $isprofileid1 = true;
     } else if ($created_chat->profile_id2 == $userprofile->profile_id) {
       $to_set_read_arr = is_null($created_chat->profile_id2_last_fetch_arr) ?
-      [] : json_decode($created_chat->profile_id2_last_fetch_arr, true);
+        [] : json_decode($created_chat->profile_id2_last_fetch_arr, true);
     }
     if (count($to_set_read_arr) < 1) {
       return response()->json([
@@ -803,14 +805,14 @@ class PrivateChatController extends Controller
       ]);
     }
     $setread = $created_chat->private_chats()
-    ->whereIn('id', $to_set_read_arr)
-    ->where([
-      ['receiver_id', '=', $userprofile->profile_id],
-    ])
-    ->update([
-      'read' => 'true',
-      'updated_at' => time(),
-    ]);
+      ->whereIn('id', $to_set_read_arr)
+      ->where([
+        ['receiver_id', '=', $userprofile->profile_id],
+      ])
+      ->update([
+        'read' => 'true',
+        'updated_at' => time(),
+      ]);
     if (!$setread) {
       return response()->json([
         'errmsg' => 'something went wrong please try again',
@@ -833,15 +835,15 @@ class PrivateChatController extends Controller
       'set_to_read_arr' => $to_set_read_arr,
       'status' => 200,
     ]);
-
   }
 
   /**
-  * public function to set request chat array id to read
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function setReqChatArrayToRead(Request $req) {
+   * public function to set request chat array id to read
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function setReqChatArrayToRead(Request $req)
+  {
     $to_set_read_arr = $req->chat_arr;
     if (!is_array($to_set_read_arr) || count($to_set_read_arr) < 1) {
       return response()->json([
@@ -862,244 +864,248 @@ class PrivateChatController extends Controller
           'errmsg' => 'You did something wrong',
           'status' => 400,
         ]);
-        case 500:
-          return response()->json([
-            'errmsg' => 'something went wrong please try again',
-            'status' => 500,
-          ]);
-          default:
-            return response()->json([
-              'errmsg' => 'You did something wrong',
-              'status' => 400,
-            ]);
-            break;
-      }
-
+      case 500:
+        return response()->json([
+          'errmsg' => 'something went wrong please try again',
+          'status' => 500,
+        ]);
+      default:
+        return response()->json([
+          'errmsg' => 'You did something wrong',
+          'status' => 400,
+        ]);
+        break;
     }
+  }
 
-    /**
-    * protected function to set chat array id to read
-    *
-    * @param Array $chat_arr
-    * @param Boolean $allow_empty
-    * @return
-    */
-    protected function setChatArrayToRead($chat_arr = [], $allow_empty = false) {
-      //return [$chat_arr];
-      if (count($chat_arr) < 1) {
-        if ($allow_empty) {
-          return 200;
-        }
-        return 400;
+  /**
+   * protected function to set chat array id to read
+   *
+   * @param Array $chat_arr
+   * @param Boolean $allow_empty
+   * @return
+   */
+  protected function setChatArrayToRead($chat_arr = [], $allow_empty = false)
+  {
+    //return [$chat_arr];
+    if (count($chat_arr) < 1) {
+      if ($allow_empty) {
+        return 200;
       }
-      $setchatreadaction = PrivateChat::whereIn('id', $chat_arr)
+      return 400;
+    }
+    $setchatreadaction = PrivateChat::whereIn('id', $chat_arr)
       ->where('receiver_id', $this->profile->profile_id)
       ->update([
         'read' => 'true',
         'updated_at' => time(),
       ]);
-      if (!$setchatreadaction) {
-        return 500;
-      } else {
-        return 200;
-      }
+    if (!$setchatreadaction) {
+      return 500;
+    } else {
+      return 200;
+    }
+  }
+
+  /**
+   * Update the specified resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @param  \App\PrivateChat  $privateChat
+   * @return \Illuminate\Http\Response
+   */
+  public function update(Request $request, PrivateChat $privateChat)
+  {
+    //
+  }
+  /**
+   * function to delete file from storage
+   *
+   */
+  public function deleteFile($file)
+  {
+    if (Storage::exists($file)) {
+      Storage::delete($file);
+    }
+  }
+
+  /**
+   * Remove the specified resource from storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function destroy(Request $req)
+  {
+    $userprofile = $this->profile;
+    $todeleteprivate_chatid = $req->chatid;
+    if (is_null($todeleteprivate_chatid) || empty($todeleteprivate_chatid)) {
+      return response()->json([
+        'errmsg' => 'Missing values to continue',
+        'status' => 400,
+      ]);
     }
 
-    /**
-    * Update the specified resource in storage.
-    *
-    * @param  \Illuminate\Http\Request  $request
-    * @param  \App\PrivateChat  $privateChat
-    * @return \Illuminate\Http\Response
-    */
-    public function update(Request $request, PrivateChat $privateChat) {
-      //
-    }
-    /**
-    * function to delete file from storage
-    *
-    */
-    public function deleteFile($file) {
-      if (Storage::exists($file)) {
-        Storage::delete($file);
-      }
-    }
-
-    /**
-    * Remove the specified resource from storage.
-    *
-    * @param  \Illuminate\Http\Request  $request
-    * @return \Illuminate\Http\Response
-    */
-    public function destroy(Request $req) {
-      $userprofile = $this->profile;
-      $todeleteprivate_chatid = $req->chatid;
-      if (is_null($todeleteprivate_chatid) || empty($todeleteprivate_chatid)) {
-        return response()->json([
-          'errmsg' => 'Missing values to continue',
-          'status' => 400,
-        ]);
-      }
-
-      $private_chat = PrivateChat::orWhere([
-        'sender_id' => $this->profile->profile_id,
-        'receiver_id' => $this->profile->profile_id,
-      ])
+    $private_chat = PrivateChat::orWhere([
+      'sender_id' => $this->profile->profile_id,
+      'receiver_id' => $this->profile->profile_id,
+    ])
       ->where('private_chatid', $todeleteprivate_chatid)
       ->first();
 
-      if (is_null($private_chat) || empty($private_chat)) {
-        return response()->json([
-          'errmsg' => 'chat not found',
-          'status' => 404,
-        ]);
-      }
-      $deleteaction = null;
-      if ($private_chat->sender_id == $userprofile->profile_id && $private_chat->sender_deleted == false) {
-        $deleteaction = $private_chat->update([
-          'sender_deleted' => true,
-          'updated_at' => time(),
-        ]);
-      } elseif ($private_chat->receiver_id == $userprofile->profile_id && $private_chat->receiver_deleted == false) {
-        $deletedaction = $private_chat->update([
-          'receiver_deleted' => true,
-          'updated_at' => time(),
-        ]);
-      }
-      if (!$deleteaction) {
-        return response()->json([
-          'errmsg' => 'could not delete chat please try again',
-          'status' => 500,
-        ]);
-      }
+    if (is_null($private_chat) || empty($private_chat)) {
       return response()->json([
-        'message' => 'chat deleted',
-        'status' => 200,
+        'errmsg' => 'chat not found',
+        'status' => 404,
       ]);
-
     }
+    $deleteaction = null;
+    if ($private_chat->sender_id == $userprofile->profile_id && $private_chat->sender_deleted == false) {
+      $deleteaction = $private_chat->update([
+        'sender_deleted' => true,
+        'updated_at' => time(),
+      ]);
+    } elseif ($private_chat->receiver_id == $userprofile->profile_id && $private_chat->receiver_deleted == false) {
+      $deletedaction = $private_chat->update([
+        'receiver_deleted' => true,
+        'updated_at' => time(),
+      ]);
+    }
+    if (!$deleteaction) {
+      return response()->json([
+        'errmsg' => 'could not delete chat please try again',
+        'status' => 500,
+      ]);
+    }
+    return response()->json([
+      'message' => 'chat deleted',
+      'status' => 200,
+    ]);
+  }
 
-    /**
-    * to set all chats from a private chat to deleted from the given id num and less
-    *
-    * @param  \Illuminate\Http\Request  $request
-    * @return \Illuminate\Http\Response
-    */
-    public function deletePrivateChatList(Request $req) {
-      $userprofile = $this->profile;
-      $create_chatid = $req->create_chatid;
-      $limiter = 0 + $req->limit_id;
-      if (is_null($create_chatid) || empty($create_chatid) || !is_integer($limiter)) {
-        return response()->json([
-          'errmsg' => 'Missing values to continue',
-          'status' => 400,
-        ]);
-      }
-      $delete1 = PrivateChat::where([
-        ['create_chatid', '=', $create_chatid],
-        ['sender_id', '=', $userprofile->profile_id],
-        ['id', '<=', $limiter],
-      ])
+  /**
+   * to set all chats from a private chat to deleted from the given id num and less
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function deletePrivateChatList(Request $req)
+  {
+    $userprofile = $this->profile;
+    $create_chatid = $req->create_chatid;
+    $limiter = 0 + $req->limit_id;
+    if (is_null($create_chatid) || empty($create_chatid) || !is_integer($limiter)) {
+      return response()->json([
+        'errmsg' => 'Missing values to continue',
+        'status' => 400,
+      ]);
+    }
+    $delete1 = PrivateChat::where([
+      ['create_chatid', '=', $create_chatid],
+      ['sender_id', '=', $userprofile->profile_id],
+      ['id', '<=', $limiter],
+    ])
       ->update([
         'sender_deleted' => true,
         'updated_at' => time(),
       ]);
 
-      $delete2 = PrivateChat::where([
-        ['create_chatid', '=', $create_chatid],
-        ['receiver_id', '=', $userprofile->profile_id],
-        ['id', '<=', $limiter],
-      ])
+    $delete2 = PrivateChat::where([
+      ['create_chatid', '=', $create_chatid],
+      ['receiver_id', '=', $userprofile->profile_id],
+      ['id', '<=', $limiter],
+    ])
       ->update([
         'receiver_deleted' => true,
         'updated_at' => time(),
       ]);
 
-      if (!$delete1 && !$delete2) {
-        return response()->json([
-          'errmsg' => 'something went wrong please try again',
-          'status' => 500,
-        ]);
-      }
-
+    if (!$delete1 && !$delete2) {
       return response()->json([
-        'message' => 'done',
-        'status' => 200,
+        'errmsg' => 'something went wrong please try again',
+        'status' => 500,
       ]);
-
     }
 
-    /**
-    * to set a particular chat to deleted for user
-    *
-    * @param  \Illuminate\Http\Request  $req
-    * @return \Illuminate\Http\Response
-    */
-    public function deleteAPrivateChat(Request $req) {
-      $userprofile = $this->profile;
-      $chatid = $req->chatid;
-      if (is_null($chatid) || empty($chatid)) {
-        return response()->json([
-          'errmsg' => 'Missing values to continue',
-          'status' => 400,
-        ]);
-      }
-      $delete1 = PrivateChat::where([
-        'private_chatid' => $chatid,
-        'sender_id' => $userprofile->profile_id,
-      ])
+    return response()->json([
+      'message' => 'done',
+      'status' => 200,
+    ]);
+  }
+
+  /**
+   * to set a particular chat to deleted for user
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function deleteAPrivateChat(Request $req)
+  {
+    $userprofile = $this->profile;
+    $chatid = $req->chatid;
+    if (is_null($chatid) || empty($chatid)) {
+      return response()->json([
+        'errmsg' => 'Missing values to continue',
+        'status' => 400,
+      ]);
+    }
+    $delete1 = PrivateChat::where([
+      'private_chatid' => $chatid,
+      'sender_id' => $userprofile->profile_id,
+    ])
       ->update([
         'sender_deleted' => true,
         'updated_at' => time(),
       ]);
 
-      $delete2 = PrivateChat::where([
-        'private_chatid' => $chatid,
-        'receiver_id' => $userprofile->profile_id,
-      ])
+    $delete2 = PrivateChat::where([
+      'private_chatid' => $chatid,
+      'receiver_id' => $userprofile->profile_id,
+    ])
       ->update([
         'receiver_deleted' => true,
         'updated_at' => time(),
       ]);
 
-      if (!$delete1 && !$delete2) {
-        return response()->json([
-          'errmsg' => 'something went wrong please try again',
-          'status' => 500,
-        ]);
-      }
-
+    if (!$delete1 && !$delete2) {
       return response()->json([
-        'message' => 'done',
-        'status' => 200,
+        'errmsg' => 'something went wrong please try again',
+        'status' => 500,
       ]);
     }
 
-    /**
-    * Public function to search for people authuser as private chatted
-    *
-    * @param  \Illuminate\Http\Request  $req
-    * @return \Illuminate\Http\Response
-    */
-    public function searchPrivateChatList(Request $req) {
-      $search_name = $req->name;
-      $userprofile = $this->profile;
-      if (is_null($search_name) || empty($search_name)) {
-        return response()->json([
-          'errmsg' => 'missing values to continue',
-          'status' => 400,
-        ]);
-      }
-      if ($search_name[0] == "@") {
-        $chatlists = CreateChat::where(function (Builder $query) {
-          $query->where('profile_id1', $this->profile->profile_id);
-          $query->whereHas('receipient_profile', function (Builder $query) {
-            $query->whereHas('user', function (Builder $query) {
-              $name = substr(request()->name, 1);
-              $query->where('username', 'like', "%{$name}%");
-            });
+    return response()->json([
+      'message' => 'done',
+      'status' => 200,
+    ]);
+  }
+
+  /**
+   * Public function to search for people authuser as private chatted
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function searchPrivateChatList(Request $req)
+  {
+    $search_name = $req->name;
+    $userprofile = $this->profile;
+    if (is_null($search_name) || empty($search_name)) {
+      return response()->json([
+        'errmsg' => 'missing values to continue',
+        'status' => 400,
+      ]);
+    }
+    if ($search_name[0] == "@") {
+      $chatlists = CreateChat::where(function (Builder $query) {
+        $query->where('profile_id1', $this->profile->profile_id);
+        $query->whereHas('receipient_profile', function (Builder $query) {
+          $query->whereHas('user', function (Builder $query) {
+            $name = substr(request()->name, 1);
+            $query->where('username', 'like', "%{$name}%");
           });
-        })
+        });
+      })
         ->orWhere(function (Builder $query) {
           $query->where('profile_id2', $this->profile->profile_id);
           $query->whereHas('initiator_profile', function (Builder $query) {
@@ -1114,14 +1120,14 @@ class PrivateChatController extends Controller
           'initiator_profile.user',
         ])
         ->simplePaginate(20);
-      } else {
-        $chatlists = CreateChat::where(function (Builder $query) {
-          $query->where('profile_id1', $this->profile->profile_id);
-          $query->whereHas('receipient_profile', function (Builder $query) {
-            $name = request()->name;
-            $query->where('profile_name', 'like', "%$name%");
-          });
-        })
+    } else {
+      $chatlists = CreateChat::where(function (Builder $query) {
+        $query->where('profile_id1', $this->profile->profile_id);
+        $query->whereHas('receipient_profile', function (Builder $query) {
+          $name = request()->name;
+          $query->where('profile_name', 'like', "%$name%");
+        });
+      })
         ->orWhere(function (Builder $query) {
           $query->where('profile_id2', $this->profile->profile_id);
           $query->whereHas('initiator_profile', function (Builder $query) {
@@ -1134,78 +1140,76 @@ class PrivateChatController extends Controller
           'initiator_profile.user',
         ])
         ->simplePaginate(20);
-      }
-
-      if (count($chatlists) > 1) {
-        return response()->json([
-          'errmsg' => 'No chats exists',
-          'status' => 404,
-        ]);
-      }
-      $lists = [];
-      foreach ($chatlists as $chatitem) {
-        if ($chatitem->profile_id1 == $userprofile->profile_id) {
-          $lists[] = ['profile' => $chatitem->receipient_profile];
-        } else if ($chatitem->profile_id2 == $userprofile->profile_id) {
-          $lists[] = ['profile' => $chatitem->initiator_profile];
-        }
-      }
-
-      return response()->json([
-        'message' => 'results found',
-        'lists' => $lists,
-        'next_url' => $chatlists->nextPageUrl(),
-        'status' => 200
-      ]);
-
     }
 
-    /**
-    * to get all info about a private chat between user and another
-    *
-    * @param  \Illuminate\Http\Request  $req
-    * @return \Illuminate\Http\Response
-    */
-    public function getAPrivateChatInfo(Request $req) {
-      $userprofile = $this->profile;
-      $create_chatid = $req->create_chatid;
-      if (is_null($create_chatid) || empty($create_chatid)) {
-        return response()->json([
-          'errmsg' => 'Missing values to continue',
-          'status' => 400,
-        ]);
-      }
-      $created_chat = CreateChat::orWhere([
-        'profile_id1' => $userprofile->profile_id,
-        'profile_id2' => $userprofile->profile_id,
-      ])->where('chatid', $create_chatid)
-      ->first();
-      if (is_null($created_chat) || empty($created_chat)) {
-        return response()->json([
-          'errmsg' => 'chat not found',
-          'status' => 404,
-        ]);
-      }
-      $totalchats = $created_chat->private_chats()->count();
-      $yoursentchats = $created_chat->private_chats()
-      ->where('sender_id', $userprofile->profile_id)->count();
-      $othersentchats = $created_chat->private_chats()
-      ->where('receiver_id', $userprofile->profile_id)->count();
-      $peryoursentchat = round(($yoursentchats / $totalchats) * 100);
-      $perothersentchats = round(($othersentchats / $totalchats) * 100);
+    if (count($chatlists) > 1) {
       return response()->json([
-        'message' => 'fetched',
-        'status' => 200,
-        'private_chatinfo' => [
-          'init_date' => $created_chat->created_at,
-          'totalchats' => $totalchats,
-          'yoursentchats' => $yoursentchats,
-          'partnersentchats' => $othersentchats,
-          'peryoursentchat' => $peryoursentchat,
-          'perothersentchats' => $perothersentchats,
-        ],
+        'errmsg' => 'No chats exists',
+        'status' => 404,
       ]);
-
+    }
+    $lists = [];
+    foreach ($chatlists as $chatitem) {
+      if ($chatitem->profile_id1 == $userprofile->profile_id) {
+        $lists[] = ['profile' => $chatitem->receipient_profile];
+      } else if ($chatitem->profile_id2 == $userprofile->profile_id) {
+        $lists[] = ['profile' => $chatitem->initiator_profile];
+      }
     }
 
+    return response()->json([
+      'message' => 'results found',
+      'lists' => $lists,
+      'next_url' => $chatlists->nextPageUrl(),
+      'status' => 200
+    ]);
   }
+
+  /**
+   * to get all info about a private chat between user and another
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function getAPrivateChatInfo(Request $req)
+  {
+    $userprofile = $this->profile;
+    $create_chatid = $req->create_chatid;
+    if (is_null($create_chatid) || empty($create_chatid)) {
+      return response()->json([
+        'errmsg' => 'Missing values to continue',
+        'status' => 400,
+      ]);
+    }
+    $created_chat = CreateChat::orWhere([
+      'profile_id1' => $userprofile->profile_id,
+      'profile_id2' => $userprofile->profile_id,
+    ])->where('chatid', $create_chatid)
+      ->first();
+    if (is_null($created_chat) || empty($created_chat)) {
+      return response()->json([
+        'errmsg' => 'chat not found',
+        'status' => 404,
+      ]);
+    }
+    $totalchats = $created_chat->private_chats()->count();
+    $yoursentchats = $created_chat->private_chats()
+      ->where('sender_id', $userprofile->profile_id)->count();
+    $othersentchats = $created_chat->private_chats()
+      ->where('receiver_id', $userprofile->profile_id)->count();
+    $peryoursentchat = round(($yoursentchats / $totalchats) * 100);
+    $perothersentchats = round(($othersentchats / $totalchats) * 100);
+    return response()->json([
+      'message' => 'fetched',
+      'status' => 200,
+      'private_chatinfo' => [
+        'init_date' => $created_chat->created_at,
+        'totalchats' => $totalchats,
+        'yoursentchats' => $yoursentchats,
+        'partnersentchats' => $othersentchats,
+        'peryoursentchat' => $peryoursentchat,
+        'perothersentchats' => $perothersentchats,
+      ],
+    ]);
+  }
+}

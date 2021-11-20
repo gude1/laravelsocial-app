@@ -19,11 +19,12 @@ class MeetupRequestConversationController extends Controller
   protected $user_blocked_profiles_id = [];
 
   /**
-  * Instantiate a new controller instance.
-  *
-  * @return void
-  */
-  public function __construct() {
+   * Instantiate a new controller instance.
+   *
+   * @return void
+   */
+  public function __construct()
+  {
     $this->middleware('jwt.verify');
     $this->middleware('app.verify');
     $this->user = auth()->user();
@@ -39,12 +40,13 @@ class MeetupRequestConversationController extends Controller
   }
 
   /**
-  * Display a listing of the resource.
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function index(Request $req) {
+   * Display a listing of the resource.
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function index(Request $req)
+  {
     $userprofile = $this->profile;
     $min = $req->min;
     $max = $req->max;
@@ -55,18 +57,18 @@ class MeetupRequestConversationController extends Controller
           ['expires_at', '>', time()],
         ]);
       })
-      ->where(function (Builder $query) {
-        $query->orWhere([
-          'sender_id' => $this->profile->profile_id,
-          'receiver_id' => $this->profile->profile_id,
-        ]);
-      })
-      ->where('id', '<', $min)
-      ->with(['sender_meet_profile', 'origin_meet_request', 'receiver_meet_profile'])
-      ->orderBy('id', 'desc')
-      ->groupBy('conversation_id')
-      ->limit(15)
-      ->get();
+        ->where(function (Builder $query) {
+          $query->orWhere([
+            'sender_id' => $this->profile->profile_id,
+            'receiver_id' => $this->profile->profile_id,
+          ]);
+        })
+        ->where('id', '<', $min)
+        ->with(['sender_meet_profile', 'origin_meet_request', 'receiver_meet_profile'])
+        ->orderBy('id', 'desc')
+        ->groupBy('conversation_id')
+        ->limit(15)
+        ->get();
     } elseif (!is_null($max) && is_integer($max)) {
       $meet_convs = MeetupRequestConversation::whereHas('origin_meet_request', function (Builder $query) {
         $query->where([
@@ -74,18 +76,18 @@ class MeetupRequestConversationController extends Controller
           ['expires_at', '>', time()],
         ]);
       })
-      ->where(function (Builder $query) {
-        $query->orWhere([
-          'sender_id' => $this->profile->profile_id,
-          'receiver_id' => $this->profile->profile_id,
-        ]);
-      })
-      ->where('id', '>', $max)
-      ->with(['sender_meet_profile', 'origin_meet_request', 'receiver_meet_profile'])
-      ->orderBy('id', 'desc')
-      ->groupBy('conversation_id')
-      ->limit(15)
-      ->get();
+        ->where(function (Builder $query) {
+          $query->orWhere([
+            'sender_id' => $this->profile->profile_id,
+            'receiver_id' => $this->profile->profile_id,
+          ]);
+        })
+        ->where('id', '>', $max)
+        ->with(['sender_meet_profile', 'origin_meet_request', 'receiver_meet_profile'])
+        ->orderBy('id', 'desc')
+        ->groupBy('conversation_id')
+        ->limit(15)
+        ->get();
     } else {
       $meet_convs = MeetupRequestConversation::whereHas('origin_meet_request', function (Builder $query) {
         $query->where([
@@ -93,17 +95,17 @@ class MeetupRequestConversationController extends Controller
           ['expires_at', '>', time()],
         ]);
       })
-      ->where(function (Builder $query) {
-        $query->orWhere([
-          'sender_id' => $this->profile->profile_id,
-          'receiver_id' => $this->profile->profile_id,
-        ]);
-      })
-      ->with(['sender_meet_profile', 'origin_meet_request', 'receiver_meet_profile'])
-      ->orderBy('id', 'desc')
-      ->groupBy('conversation_id')
-      ->limit(15)
-      ->get();
+        ->where(function (Builder $query) {
+          $query->orWhere([
+            'sender_id' => $this->profile->profile_id,
+            'receiver_id' => $this->profile->profile_id,
+          ]);
+        })
+        ->with(['sender_meet_profile', 'origin_meet_request', 'receiver_meet_profile'])
+        ->orderBy('id', 'desc')
+        ->groupBy('conversation_id')
+        ->limit(15)
+        ->get();
     }
 
     if (count($meet_convs) < 1) {
@@ -116,7 +118,7 @@ class MeetupRequestConversationController extends Controller
     foreach ($meet_convs as $meet_conv) {
       $meet_conv->makeVisible('num_new_msg');
       $partner_id = $meet_conv->sender_meet_profile->owner_id == $userprofile->profile_id ?
-      $meet_conv->sender_meet_profile->owner_id : $meet_conv->receiver_meet_profile->owner_id;
+        $meet_conv->sender_meet_profile->owner_id : $meet_conv->receiver_meet_profile->owner_id;
       $meet_conv['conv_list'] = $this->getConvsById($meet_conv->conversation_id, $partner_id);
     }
 
@@ -125,10 +127,10 @@ class MeetupRequestConversationController extends Controller
       'meet_convs' => $meet_convs,
       'status' => 200,
     ]);
-
   }
 
-  private function getConvsById($conv_id, $partner_id) {
+  private function getConvsById($conv_id, $partner_id)
+  {
     $userprofile = $this->profile;
     $partner = Profile::with('user')->firstWhere('profile_id', $partner_id);
     if (empty($conv_id) || is_null($partner)) {
@@ -136,9 +138,9 @@ class MeetupRequestConversationController extends Controller
     }
 
     $meet_req_convs = MeetupRequestConversation::where('conversation_id', $conv_id)
-    ->orderBy('id', 'desc')
-    ->limit(10)
-    ->get();
+      ->orderBy('id', 'desc')
+      ->limit(10)
+      ->get();
 
     $set_delivered = MeetupRequestConversation::where([
       ['id', '<=', $meet_req_convs->first()->id],
@@ -146,7 +148,7 @@ class MeetupRequestConversationController extends Controller
       ['status', '!=', 'delievered'],
       ['status', '!=', 'read'],
     ])
-    ->update(['status' => 'delievered']);
+      ->update(['status' => 'delievered']);
 
     if ($set_delivered) {
       FCMNotification::send([
@@ -168,12 +170,13 @@ class MeetupRequestConversationController extends Controller
   }
 
   /**
-  * Fetch conversations by conversation by id and set to read
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function getConvsAndSetRead(Request $req) {
+   * Fetch conversations by conversation by id and set to read
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function getConvsAndSetRead(Request $req)
+  {
     $userprofile = $this->profile;
     if (empty($req->conversation_id) || empty($req->request_id)) {
       return response()->json([
@@ -200,21 +203,21 @@ class MeetupRequestConversationController extends Controller
 
     if (!is_null($min) && is_integer($min)) {
       $convs = MeetupRequestConversation::where('conversation_id', $conv_id)
-      ->where('id', '<', $min)
-      ->orderBy('id', 'desc')
-      ->limit(10)
-      ->get();
+        ->where('id', '<', $min)
+        ->orderBy('id', 'desc')
+        ->limit(10)
+        ->get();
     } elseif (!is_null($max) && is_integer($max)) {
       $convs = MeetupRequestConversation::where('conversation_id', $conv_id)
-      ->where('id', '>', $max)
-      ->orderBy('id', 'desc')
-      ->limit(10)
-      ->get();
+        ->where('id', '>', $max)
+        ->orderBy('id', 'desc')
+        ->limit(10)
+        ->get();
     } else {
       $convs = MeetupRequestConversation::where('conversation_id', $conv_id)
-      ->orderBy('id', 'desc')
-      ->limit(10)
-      ->get();
+        ->orderBy('id', 'desc')
+        ->limit(10)
+        ->get();
     }
 
     if (count($convs) < 1) {
@@ -225,12 +228,12 @@ class MeetupRequestConversationController extends Controller
     }
 
     $set_read = MeetupRequestConversation::where('id', '<=', $convs->first()->id)
-    ->where('receiver_id', $userprofile->profile_id)
-    ->where('status', '!=', 'read')
-    ->update(['status' => 'read']);
+      ->where('receiver_id', $userprofile->profile_id)
+      ->where('status', '!=', 'read')
+      ->update(['status' => 'read']);
 
     $partner = MeetupRequestConversation::with('sender_profile.user')
-    ->firstWhere('receiver_id', $userprofile->profile_id);
+      ->firstWhere('receiver_id', $userprofile->profile_id);
 
     if ($set_read && $partner->sender_profile) {
       FCMNotification::send([
@@ -255,12 +258,13 @@ class MeetupRequestConversationController extends Controller
   }
 
   /**
-  * Store a newly created resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function store(Request $req) {
+   * Store a newly created resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function store(Request $req)
+  {
     $userprofile = $this->profile;
     $meet_reqid = $req->request_id;
     if (is_null($meet_reqid) || empty($meet_reqid)) {
@@ -319,7 +323,8 @@ class MeetupRequestConversationController extends Controller
 
     //check if auth user not muted
     $partner_meet_profile = !empty($received_conv) ? $received_conv->sender_meet_profile : null;
-    if ($partner_meet_profile &&
+    if (
+      $partner_meet_profile &&
       in_array($userprofile->profile_id, $partner_meet_profile->black_listed_arr)
     ) {
       return response()->json([
@@ -364,7 +369,8 @@ class MeetupRequestConversationController extends Controller
         'receiver_id' => $receiver_id,
         'created_at' => time(),
         'updated_at' => time(),
-      ]));
+      ])
+    );
     $partner = Profile::with('user')->firstWhere('profile_id', $receiver_id);
 
     if (!$sendconv) {
@@ -374,7 +380,6 @@ class MeetupRequestConversationController extends Controller
       ]);
     }
     $l = '
-
           🌌';
     $t = '📷';
 
@@ -402,27 +407,27 @@ class MeetupRequestConversationController extends Controller
           ],
         ],
       ]);
-
     }
     return response()->json([
       'message' => 'sent',
       'conv' => $sendconv,
       'status' => 200,
     ]);
-
   }
 
   /**
-  * this method handling uploading of chat image
-  *
-  * @return []
-  */
-  public function uploadConvPic() {
+   * this method handling uploading of chat image
+   *
+   * @return []
+   */
+  public function uploadConvPic()
+  {
     $profileid = $this->profile->profile_id;
     $images = [];
     $chatpic = request()->chat_pic;
     $thumbchatpic = request()->thumb_chat_pic;
-    if (request()->hasFile('chat_pic') && request()->hasFile('thumb_chat_pic') && request()->file('chat_pic')->isValid() && request()->file('thumb_chat_pic')->isValid()
+    if (
+      request()->hasFile('chat_pic') && request()->hasFile('thumb_chat_pic') && request()->file('chat_pic')->isValid() && request()->file('thumb_chat_pic')->isValid()
     ) {
       $chatpicext = $chatpic->extension();
       $thumbchatpicext = $thumbchatpic->extension();
@@ -441,20 +446,22 @@ class MeetupRequestConversationController extends Controller
         'chatpicpath' => $chatpicpath,
         'thumbchatpicpath' => $thumbchatpicpath,
       ];
-
     } //parent if statement
     return $images;
   }
 
   /**
-  * public function to set conversation
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function setConvStatus(Request $req) {
-    $option = ['1',
-      '2'];
+   * public function to set conversation
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function setConvStatus(Request $req)
+  {
+    $option = [
+      '1',
+      '2'
+    ];
     if (!is_array($req->arr) || count($req->arr) < 1 || !in_array($req->type, $option)) {
       return response()->json([
         'errmsg' => 'Missing values to continue',
@@ -467,9 +474,9 @@ class MeetupRequestConversationController extends Controller
         'receiver_id' => $this->profile->profile_id,
       ]);
     })
-    ->whereIn('id', $req->arr)
-    ->where('status', '!=', 'read')
-    ->update(['status' => $req->type == "1" ? "delievered" : "read"]);
+      ->whereIn('id', $req->arr)
+      ->where('status', '!=', 'read')
+      ->update(['status' => $req->type == "1" ? "delievered" : "read"]);
 
     return response()->json([
       'message' => "{$t} done",
@@ -478,33 +485,36 @@ class MeetupRequestConversationController extends Controller
   }
 
   /**
-  * Display the specified resource.
-  *
-  * @param  \App\MeetupRequestConversation  $meetupRequestConversation
-  * @return \Illuminate\Http\Response
-  */
-  public function show(MeetupRequestConversation $meetupRequestConversation) {
+   * Display the specified resource.
+   *
+   * @param  \App\MeetupRequestConversation  $meetupRequestConversation
+   * @return \Illuminate\Http\Response
+   */
+  public function show(MeetupRequestConversation $meetupRequestConversation)
+  {
     //
   }
 
   /**
-  * Update the specified resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @param  \App\MeetupRequestConversation  $meetupRequestConversation
-  * @return \Illuminate\Http\Response
-  */
-  public function update(Request $request, MeetupRequestConversation $meetupRequestConversation) {
+   * Update the specified resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @param  \App\MeetupRequestConversation  $meetupRequestConversation
+   * @return \Illuminate\Http\Response
+   */
+  public function update(Request $request, MeetupRequestConversation $meetupRequestConversation)
+  {
     //
   }
 
   /**
-  * Remove the specified resource from storage.
-  *
-  * @param  \App\MeetupRequestConversation  $meetupRequestConversation
-  * @return \Illuminate\Http\Response
-  */
-  public function destroy(MeetupRequestConversation $meetupRequestConversation) {
+   * Remove the specified resource from storage.
+   *
+   * @param  \App\MeetupRequestConversation  $meetupRequestConversation
+   * @return \Illuminate\Http\Response
+   */
+  public function destroy(MeetupRequestConversation $meetupRequestConversation)
+  {
     //
   }
 }

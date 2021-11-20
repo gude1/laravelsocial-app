@@ -9,32 +9,45 @@ class PrivateChat extends Model
     //
     protected $guarded = [];
     public $timestamps = false;
-    protected $hidden = ['num_new_msg'];
+    protected $hidden = ['num_new_msg', 'partnerprofile'];
 
     /**
      * The accessors to append to the model's array form.
      *
      * @var array
      */
-    protected $appends = ['num_new_msg'];
+    protected $appends = ['num_new_msg', 'partnerprofile'];
 
     /**
      * accessor for num_new_msg
      */
     public function getNumNewMsgAttribute()
     {
-        $profile = auth()->user()->profile;
-        //if ($this->receiver_id == $profile->profile_id) {
-        return $this->where([
-            'create_chatid' => $this->create_chatid,
-            'receiver_id' => $profile->profile_id,
-            'receiver_deleted' => false,
-            ['read', '!=', 'true'],
-        ])->count();
-        //}
-        //return 0;
-
+        $profile = !is_null(auth()->user()) ? auth()->user()->profile : null;
+        if (!is_null($profile)) {
+            return $this->where([
+                'created_chatid' => $this->created_chatid,
+                'receiver_id' => $profile->profile_id,
+                'receiver_deleted' => false,
+                ['read', '!=', 'true'],
+            ])->count();
+        }
+        return 0;
     }
+
+    /**
+     * accessor for partnerprofile
+     */
+    public function getPartnerProfileAttribute()
+    {
+        $profile = !is_null(auth()->user()) ? auth()->user()->profile : null;
+        if (!is_null($profile)) {
+            return  $profile->profile_id == $this->sender_id ?
+                Profile::with('user')->firstWhere('profile_id', $this->receiver_id)
+                :  Profile::with('user')->firstWhere('profile_id', $this->sender_id);
+        }
+    }
+
 
     /**
      * accessor for chat_pics
@@ -76,19 +89,10 @@ class PrivateChat extends Model
     }
 
     /**
-     * belongsTo relationship between private chat and createchat
-     */
-    public function creator_chat()
-    {
-        return $this->belongsTo(CreateChat::class, 'create_chatid', 'chatid');
-    }
-
-    /**
-     *
+     *hasMany relationship between privatechat and other 
      */
     public function related_chats()
     {
-        return $this->hasMany(PrivateChat::class, 'create_chatid', 'create_chatid')->orderBy('id', 'desc');
+        return $this->hasMany(PrivateChat::class, 'created_chatid', 'created_chatid');
     }
-
 }

@@ -15,7 +15,7 @@ class CreatePrivateChatsTable extends Migration
     {
         Schema::create('private_chats', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('create_chatid');
+            $table->string('created_chatid');
             $table->string('private_chatid');
             $table->string('sender_id');
             $table->string('receiver_id');
