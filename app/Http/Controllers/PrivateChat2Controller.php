@@ -128,6 +128,8 @@ class PrivateChat2Controller extends Controller
         return [
             'created_chatid' => $created_chatid,
             'num_new_msg' => $chats->first()->num_new_msg,
+            'first_id' => $chats->first()->id,
+            'last_id' => $chats->last()->id,
             'partnerprofile' => $chats->first()->partnerprofile,
             'chats' => $chats
         ];
@@ -408,6 +410,56 @@ class PrivateChat2Controller extends Controller
 
         return response()->json([
             'message' => 'deleted',
+            'status' => 200,
+        ]);
+    }
+
+    /**
+     * public function to delete all chats from a chatlis
+     * 
+     * @param  \Illuminate\Http\Request  $req
+     * @return \Illuminate\Http\Response
+     */
+    public function deletePrivateChatList(Request $req)
+    {
+        $userprofile = $this->profile;
+        $created_chatid = $req->created_chatid;
+        $limiter = 0 + $req->limit_id;
+        if (is_null($created_chatid) || empty($created_chatid) || !is_integer($limiter)) {
+            return response()->json([
+                'errmsg' => 'Missing values to continue',
+                'status' => 400,
+            ]);
+        }
+        $delete1 = PrivateChat::where([
+            ['created_chatid', '=', $created_chatid],
+            ['sender_id', '=', $userprofile->profile_id],
+            ['id', '<=', $limiter],
+        ])
+            ->update([
+                'sender_deleted' => true,
+                'updated_at' => time(),
+            ]);
+
+        $delete2 = PrivateChat::where([
+            ['created_chatid', '=', $created_chatid],
+            ['receiver_id', '=', $userprofile->profile_id],
+            ['id', '<=', $limiter],
+        ])
+            ->update([
+                'receiver_deleted' => true,
+                'updated_at' => time(),
+            ]);
+
+        if (!$delete1 && !$delete2) {
+            return response()->json([
+                'errmsg' => 'something went wrong please try again',
+                'status' => 500,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'done',
             'status' => 200,
         ]);
     }
