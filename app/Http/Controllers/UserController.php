@@ -296,8 +296,7 @@ class UserController extends Controller
    */
   public function sendNotification(Request $request)
   {
-    return $user = auth()->user();
-
+    $user = auth()->user();
     $data = [
       "to" => $user->device_token,
       'priority' => 'high',

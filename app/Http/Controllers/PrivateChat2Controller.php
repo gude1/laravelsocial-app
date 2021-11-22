@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\FCMNotification;
 use App\PrivateChat;
 use App\PageVisits;
 use App\Profile;
@@ -351,15 +352,34 @@ class PrivateChat2Controller extends Controller
         $created_chatid = $req->created_chatid;
         $min =  request()->min;
         $max = request()->max;
-
+        $private_chat = PrivateChat::firstWhere('created_chatid', $created_chatid);
         $set_to_read = $this->setChatStatus($created_chatid, $min, $max, 'true');
-
         if (!$set_to_read) {
             return response()->json([
                 'errmsg' => 'failed',
                 'status' => 400
             ]);
         }
+
+        $payload_arr = ['created_chatid' => $created_chatid, 'status' => 'true'];
+        if ($min) {
+            $payload_arr['min'] = $min;
+        } else {
+            $payload_arr['max'] = $max;
+        }
+
+        FCMNotification::send([
+            "to" => $private_chat->partnerprofile->user->device_token,
+            'priority' => 'high',
+            'content-available' => true,
+            'data' => [
+                'nav_id' => 'PRIVATECHATLIST',
+                'responseData' => [
+                    'type' => 'SET_FCM_PRIVATECHAT_READ_STATUS',
+                    'payload' => $payload_arr,
+                ],
+            ],
+        ]);
 
         return response()->json([
             'message' => 'done',
