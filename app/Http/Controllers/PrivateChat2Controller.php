@@ -84,10 +84,37 @@ class PrivateChat2Controller extends Controller
                 'status' => 404
             ]);
         }
-
         $chat_list = [];
+        $fcm_notes_list = [];
+
         foreach ($private_chat_list as $item) {
-            $chat_list[] = $this->getChats($item->created_chatid);
+            $newitem = $this->getChats($item->created_chatid);
+            if (count($newitem) > 0) {
+                $chat_list[] = $newitem;
+                if ($newitem['set_status']) {
+                    $fcm_notes_list[] = [
+                        'min' => $newitem['first_id'],
+                        'created_chatid' => $newitem['created_chatid'],
+                        'partnerprofile' => $newitem['partnerprofile'],
+                        'status' => 'delivered'
+                    ];
+                }
+            }
+        }
+
+        foreach ($fcm_notes_list as $item) {
+            FCMNotification::send([
+                "to" => $item['partnerprofile']->user->device_token,
+                'priority' => 'high',
+                'content-available' => true,
+                'data' => [
+                    'nav_id' => 'PRIVATECHATLIST',
+                    'responseData' => [
+                        'type' => 'SET_FCM_PRIVATECHAT_READ_STATUS',
+                        'payload' => [$item],
+                    ],
+                ],
+            ]);
         }
 
         return response()->json([
@@ -121,13 +148,14 @@ class PrivateChat2Controller extends Controller
         }
 
         $chats = $chats->orderBy('id', 'desc')->limit($limit)->get();
-
-
         if (count($chats) > 0) {
-            $this->setChatStatus($created_chatid, $chats->first()->id);
+            $set_status =  $this->setChatStatus($created_chatid, $chats->first()->id);
+        } else {
+            return [];
         }
         return [
             'created_chatid' => $created_chatid,
+            'set_status' => $set_status,
             'num_new_msg' => $chats->first()->num_new_msg,
             'first_id' => $chats->first()->id,
             'last_id' => $chats->last()->id,
@@ -262,6 +290,18 @@ class PrivateChat2Controller extends Controller
                 'status' => 500,
             ]);
         }
+        FCMNotification::send([
+            "to" => $receiver_profile->user->device_token,
+            'priority' => 'high',
+            'content-available' => true,
+            'data' => [
+                'nav_id' => 'PRIVATECHAT',
+                'responseData' => [
+                    'type' => 'SET_FCM_PRIVATECHAT',
+                    'payload' => $new_chat,
+                ],
+            ],
+        ]);
 
         return response()->json([
             'message' => 'chat sent',
@@ -315,6 +355,7 @@ class PrivateChat2Controller extends Controller
         $min =  request()->min;
         $max = request()->max;
         $created_chatid = request()->created_chatid;
+        $partner_id = request()->partner_id;
 
         if (is_null($created_chatid) || empty($created_chatid)) {
             return response()->json([
@@ -325,18 +366,36 @@ class PrivateChat2Controller extends Controller
 
         $chatlist = $this->getChats($created_chatid, $max, $min, 30);
 
-        if (count($chatlist['chats']) < 1) {
+        if (count($chatlist) < 1 || count($chatlist['chats']) < 1) {
             return response()->json([
                 'errmsg' => 'chats not found',
                 'status' => 400,
             ]);
         }
+        if ($chatlist['set_status']) {
+            $payload = ['created_chatid' => $created_chatid, 'status' => 'delivered'];
+            if ($max) {
+                $payload['max'] = $max;
+            } else {
+                $payload['min'] = $chatlist['first_id'];
+            }
+            FCMNotification::send([
+                "to" => $chatlist['partnerprofile']->user->device_token,
+                'priority' => 'high',
+                'content-available' => true,
+                'data' => [
+                    'nav_id' => 'PRIVATECHATLIST',
+                    'responseData' => [
+                        'type' => 'SET_FCM_PRIVATECHAT_READ_STATUS',
+                        'payload' => [$payload],
+                    ],
+                ],
+            ]);
+        }
 
         return response()->json([
             'message' => 'chat  found',
-            'chats' => $chatlist['chats'],
-            'count' => count($chatlist['chats']),
-            'partnerprofile' =>  $chatlist['partnerprofile'],
+            'chatlist' => $chatlist,
             'status' => 200,
         ]);
     }
@@ -376,7 +435,7 @@ class PrivateChat2Controller extends Controller
                 'nav_id' => 'PRIVATECHATLIST',
                 'responseData' => [
                     'type' => 'SET_FCM_PRIVATECHAT_READ_STATUS',
-                    'payload' => $payload_arr,
+                    'payload' => [$payload_arr],
                 ],
             ],
         ]);
