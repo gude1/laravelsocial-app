@@ -113,7 +113,7 @@ Route::match(['get', 'post'], 'setprivatechatarrread', 'PrivateChatController@se
 Route::match(['get', 'post'], 'deleteaprivatechat', 'PrivateChat2Controller@destroy');
 Route::match(['get', 'post'], 'deleteprivatechat', 'PrivateChat2Controller@deletePrivateChatList');
 Route::match(['get', 'post'], 'getaprivatechatinfo', 'PrivateChat2Controller@getAPrivateChatInfo');
-Route::match(['get', 'post'], 'searchprivatechatlist', 'PrivateChatController@searchPrivateChatList');
+Route::match(['get', 'post'], 'searchprivatechatlist', 'PrivateChat2Controller@searchPrivateChatList');
 Route::match(['get', 'post'], 'deleteaprivatechat', 'PrivateChat2Controller@deleteAPrivateChat');
 
 /**

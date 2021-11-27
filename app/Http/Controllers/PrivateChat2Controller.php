@@ -298,7 +298,7 @@ class PrivateChat2Controller extends Controller
                 'nav_id' => 'PRIVATECHAT',
                 'responseData' => [
                     'type' => 'SET_FCM_PRIVATECHAT',
-                    'payload' => $new_chat,
+                    'payload' => [$new_chat, $receiver_profile],
                 ],
             ],
         ]);
@@ -397,6 +397,77 @@ class PrivateChat2Controller extends Controller
             'message' => 'chat  found',
             'chatlist' => $chatlist,
             'status' => 200,
+        ]);
+    }
+
+    /**
+     * Public function to search for people authuser as private chatted
+     *
+     * @param  \Illuminate\Http\Request  $req
+     * @return \Illuminate\Http\Response
+     */
+    public function searchPrivateChatList(Request $req)
+    {
+        $search_name = $req->name;
+        //return $this->profile;
+        if (is_null($search_name) || empty($search_name)) {
+            return response()->json([
+                'errmsg' => 'missing values to continue',
+                'status' => 400,
+            ]);
+        }
+        if ($search_name[0] == "@") {
+            $name = substr($search_name, 1);
+            $chatlist = PrivateChat::where(function (Builder $query) use ($name) {
+                $query->where('sender_id', $this->profile->profile_id);
+                $query->whereHas('receiver_profile', function (Builder $query) use ($name) {
+                    $query->whereHas('user', function (Builder $query) use ($name) {
+                        $query->where('username', 'like', "%{$name}%");
+                    });
+                });
+            })
+                ->orWhere(function (Builder $query) use ($name) {
+                    $query->where('receiver_id', $this->profile->profile_id);
+                    $query->whereHas('sender_profile', function (Builder $query) use ($name) {
+                        $query->whereHas('user', function (Builder $query) use ($name) {
+                            $query->where('username', 'like', "%{$name}%");
+                        });
+                    });
+                })
+                ->groupBy('created_chatid')
+                ->simplePaginate(20);
+        } else {
+            $chatlist = PrivateChat::where(function (Builder $query) use ($search_name) {
+                $query->where('sender_id', $this->profile->profile_id);
+                $query->whereHas('receiver_profile', function (Builder $query) use ($search_name) {
+                    $query->where('profile_name', 'like', "%$search_name%");
+                });
+            })
+                ->orWhere(function (Builder $query) use ($search_name) {
+                    $query->where('receiver_id', $this->profile->profile_id);
+                    $query->whereHas('sender_profile', function (Builder $query) use ($search_name) {
+                        $query->where('profile_name', 'like', "%$search_name%");
+                    });
+                })
+                ->groupBy('created_chatid')
+                ->simplePaginate(20);
+        }
+        if (count($chatlist) < 1) {
+            return response()->json([
+                'errmsg' => 'No results',
+                'status' => 404,
+            ]);
+        }
+        $lists = [];
+        foreach ($chatlist as $chatlistitem) {
+            $lists[] = ['profile' => $chatlistitem->partnerprofile];
+        }
+
+        return response()->json([
+            'message' => 'results found',
+            'lists' => $lists,
+            'next_url' => $chatlist->nextPageUrl(),
+            'status' => 200
         ]);
     }
 
