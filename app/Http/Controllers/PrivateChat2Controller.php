@@ -110,7 +110,7 @@ class PrivateChat2Controller extends Controller
                 'data' => [
                     'nav_id' => 'PRIVATECHATLIST',
                     'responseData' => [
-                        'type' => 'SET_FCM_PRIVATECHAT_READ_STATUS',
+                        'type' => 'SET_PRIVATECHAT_READ_STATUS',
                         'payload' => [$item],
                     ],
                 ],
@@ -395,7 +395,7 @@ class PrivateChat2Controller extends Controller
 
         return response()->json([
             'message' => 'chat  found',
-            'chatlist' => $chatlist,
+            'chatlistitem' => $chatlist,
             'status' => 200,
         ]);
     }
@@ -505,7 +505,7 @@ class PrivateChat2Controller extends Controller
             'data' => [
                 'nav_id' => 'PRIVATECHATLIST',
                 'responseData' => [
-                    'type' => 'SET_FCM_PRIVATECHAT_READ_STATUS',
+                    'type' => 'SET_PRIVATECHAT_READ_STATUS',
                     'payload' => [$payload_arr],
                 ],
             ],
