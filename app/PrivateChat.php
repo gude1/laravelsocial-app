@@ -57,19 +57,15 @@ class PrivateChat extends Model
         if (is_null($pics) || empty($pics)) {
             return [];
         }
-        $chatimagesarr = json_decode($pics, true);
-        $newarr = [];
-        if (is_array($chatimagesarr) && count($chatimagesarr) > 0) {
-            foreach ($chatimagesarr as $chatimagearr) {
-                array_push($newarr, [
-                    'chatpic' => url($chatimagearr['chatpicpath']),
-                    'size' => $chatimagearr['size'],
-                    'thumbchatpic' => url($chatimagearr['thumbchatpicpath']),
-                ]);
-            }
-            return $newarr;
+        $chatimagearr = json_decode($pics, true);
+        if (count($chatimagearr) > 0) {
+            return [
+                'chatpic' => url($chatimagearr['chatpicpath']),
+                'size' => $chatimagearr['size'],
+                'thumbchatpic' => url($chatimagearr['thumbchatpicpath']),
+            ];
         }
-        return $chatimagesarr;
+        return $chatimagearr;
     }
 
     /**

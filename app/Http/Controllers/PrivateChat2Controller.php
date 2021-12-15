@@ -267,7 +267,7 @@ class PrivateChat2Controller extends Controller
         $data = $req->only('chat_msg');
         $chat_pic = $this->uploadChatPic();
         if (is_array($chat_pic) && count($chat_pic) > 0) {
-            $data['chat_pic'] = json_encode($chat_pic);
+            $data['chat_pics'] = json_encode($chat_pic);
         }
         if (count($data) < 1) {
             return response()->json([
@@ -306,6 +306,7 @@ class PrivateChat2Controller extends Controller
         return response()->json([
             'message' => 'chat sent',
             'partnerprofile' => $receiver_profile,
+            'created_chatid' => $new_chat->created_chatid,
             'private_chat' => $new_chat->refresh(),
             'status' => 200,
         ]);
@@ -330,7 +331,7 @@ class PrivateChat2Controller extends Controller
             $uniqueid = rand(0, 73737);
             $chatpicfilename = "$profileid$uniqueid.$chatpicext";
             $thumbchatpicfilename = "$profileid$uniqueid.$thumbchatpicext";
-            $chatpicpath = $chatpic->storeAs('images/uploads/thumbchatpics', $chatpicfilename, 'publics');
+            $chatpicpath = $chatpic->storeAs('images/uploads/chatpics', $chatpicfilename, 'publics');
             $thumbchatpicpath = $thumbchatpic->storeAs('images/uploads/thumbchatpics', $thumbchatpicfilename, 'publics');
             if (!$chatpicpath || !$thumbchatpicpath) {
                 return [];
@@ -357,11 +358,29 @@ class PrivateChat2Controller extends Controller
         $created_chatid = request()->created_chatid;
         $partner_id = request()->partner_id;
 
-        if (is_null($created_chatid) || empty($created_chatid)) {
-            return response()->json([
-                'errmsg' => 'chat not found',
-                'status' => 400,
-            ]);
+        if (!$created_chatid) {
+            if (!$partner_id) {
+                return response()->json([
+                    'errmsg' => 'chat not found',
+                    'status' => 400,
+                ]);
+            }
+            $created_chatid = PrivateChat::select('created_chatid')->where([
+                'sender_id' => $this->profile->profile_id,
+                'receiver_id' => $partner_id,
+            ])
+                ->orWhere([
+                    ['sender_id', '=', $partner_id],
+                    ['receiver_id', '=', $this->profile->profile_id]
+                ])
+                ->first();
+            if (is_null($created_chatid)) {
+                return response()->json([
+                    'errmsg' => 'chat not found',
+                    'status' => 400,
+                ]);
+            }
+            $created_chatid = $created_chatid->created_chatid;
         }
 
         $chatlist = $this->getChats($created_chatid, $max, $min, 30);
