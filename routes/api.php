@@ -137,7 +137,7 @@ Route::match(['get', 'post'], 'deletemeetupreq', 'MeetupRequestController@destro
 Route::match(['get', 'post'], 'meetupreqconvlist', 'MeetupRequestConversationController@index');
 Route::match(['get', 'post'], 'setmeetconvstatus', 'MeetupRequestConversationController@setConvStatus');
 Route::match(['get', 'post'], 'addmeetupreqconv', 'MeetupRequestConversationController@store');
-Route::match(['get', 'post'], 'getandreadmeetconvs', 'MeetupRequestConversationController@getConvsAndSetRead');
+Route::match(['get', 'post'], 'getmeetconvs', 'MeetupRequestConversationController@getConvs');
 
 /**
  *ComplaintSuggestReport Controller

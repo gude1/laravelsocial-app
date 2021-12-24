@@ -37,6 +37,7 @@ class PrivateChat extends Model
 
     /**
      * accessor for partnerprofile
+     * 
      */
     public function getPartnerProfileAttribute()
     {

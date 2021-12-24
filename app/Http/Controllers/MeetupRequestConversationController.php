@@ -51,7 +51,7 @@ class MeetupRequestConversationController extends Controller
     $min = $req->min;
     $max = $req->max;
     if (!is_null($min) && is_integer($min)) {
-      $meet_convs = MeetupRequestConversation::whereHas('origin_meet_request', function (Builder $query) {
+      $meet_convs = MeetupRequestConversation::select('conversation_id')->whereHas('origin_meet_request', function (Builder $query) {
         $query->where([
           'deleted' => false,
           ['expires_at', '>', time()],
@@ -64,13 +64,13 @@ class MeetupRequestConversationController extends Controller
           ]);
         })
         ->where('id', '<', $min)
-        ->with(['sender_meet_profile', 'origin_meet_request', 'receiver_meet_profile'])
+        ->with(['origin_meet_request'])
         ->orderBy('id', 'desc')
         ->groupBy('conversation_id')
         ->limit(15)
         ->get();
     } elseif (!is_null($max) && is_integer($max)) {
-      $meet_convs = MeetupRequestConversation::whereHas('origin_meet_request', function (Builder $query) {
+      $meet_convs = MeetupRequestConversation::select('conversation_id')->whereHas('origin_meet_request', function (Builder $query) {
         $query->where([
           'deleted' => false,
           ['expires_at', '>', time()],
@@ -83,13 +83,13 @@ class MeetupRequestConversationController extends Controller
           ]);
         })
         ->where('id', '>', $max)
-        ->with(['sender_meet_profile', 'origin_meet_request', 'receiver_meet_profile'])
+        ->with(['origin_meet_request'])
         ->orderBy('id', 'desc')
         ->groupBy('conversation_id')
         ->limit(15)
         ->get();
     } else {
-      $meet_convs = MeetupRequestConversation::whereHas('origin_meet_request', function (Builder $query) {
+      $meet_convs = MeetupRequestConversation::select('conversation_id')->whereHas('origin_meet_request', function (Builder $query) {
         $query->where([
           'deleted' => false,
           ['expires_at', '>', time()],
@@ -101,7 +101,7 @@ class MeetupRequestConversationController extends Controller
             'receiver_id' => $this->profile->profile_id,
           ]);
         })
-        ->with(['sender_meet_profile', 'origin_meet_request', 'receiver_meet_profile'])
+        ->with(['origin_meet_request'])
         ->orderBy('id', 'desc')
         ->groupBy('conversation_id')
         ->limit(15)
@@ -116,10 +116,8 @@ class MeetupRequestConversationController extends Controller
     }
 
     foreach ($meet_convs as $meet_conv) {
-      $meet_conv->makeVisible('num_new_msg');
-      $partner_id = $meet_conv->sender_meet_profile->owner_id == $userprofile->profile_id ?
-        $meet_conv->sender_meet_profile->owner_id : $meet_conv->receiver_meet_profile->owner_id;
-      $meet_conv['conv_list'] = $this->getConvsById($meet_conv->conversation_id, $partner_id);
+      $meet_conv->makeVisible(['num_new_msg', 'partnermeetprofile']);
+      $meet_conv['conv_list'] = $this->getConvsById($meet_conv->conversation_id, $meet_conv->partnermeetprofile->owner_id);
     }
 
     return response()->json([
@@ -142,13 +140,7 @@ class MeetupRequestConversationController extends Controller
       ->limit(10)
       ->get();
 
-    $set_delivered = MeetupRequestConversation::where([
-      ['id', '<=', $meet_req_convs->first()->id],
-      ['receiver_id', '=', $userprofile->profile_id],
-      ['status', '!=', 'delievered'],
-      ['status', '!=', 'read'],
-    ])
-      ->update(['status' => 'delievered']);
+    $set_delivered = $this->setStatus($conv_id, $meet_req_convs->first()->id);
 
     if ($set_delivered) {
       FCMNotification::send([
@@ -170,12 +162,12 @@ class MeetupRequestConversationController extends Controller
   }
 
   /**
-   * Fetch conversations by conversation by id and set to read
+   * Fetch conversations by conversation by id and set to delievered
    *
    * @param  \Illuminate\Http\Request  $req
    * @return \Illuminate\Http\Response
    */
-  public function getConvsAndSetRead(Request $req)
+  public function getConvs(Request $req)
   {
     $userprofile = $this->profile;
     if (empty($req->conversation_id) || empty($req->request_id)) {
@@ -184,7 +176,6 @@ class MeetupRequestConversationController extends Controller
         'status' => 400,
       ]);
     }
-
     $conv_id = $req->conversation_id;
     $min = $req->min;
     $max = $req->max;
@@ -227,15 +218,11 @@ class MeetupRequestConversationController extends Controller
       ]);
     }
 
-    $set_read = MeetupRequestConversation::where('id', '<=', $convs->first()->id)
-      ->where('receiver_id', $userprofile->profile_id)
-      ->where('status', '!=', 'read')
-      ->update(['status' => 'read']);
-
+    $set_status = $this->setStatus($conv_id, $convs->first()->id);
     $partner = MeetupRequestConversation::with('sender_profile.user')
       ->firstWhere('receiver_id', $userprofile->profile_id);
 
-    if ($set_read && $partner->sender_profile) {
+    if ($set_status && $partner->sender_profile) {
       FCMNotification::send([
         "to" => $partner->sender_profile->user->device_token,
         'priority' => 'high',
@@ -243,7 +230,7 @@ class MeetupRequestConversationController extends Controller
         'data' => [
           'nav_id' => 'MEETREQ_CONVS',
           'responseData' => [
-            'type' => 'SET_FCM_MEET_CONV_TO_READ',
+            'type' => 'SET_FCM_MEET_CONV_TO_DELIVERED',
             'conv_id' => $conv_id,
             'payload' => $convs->first()->id,
           ],
@@ -252,6 +239,8 @@ class MeetupRequestConversationController extends Controller
     }
 
     return response()->json([
+      'conversation_id' => $conv_id,
+      'origin_meet_request' => $meet_req,
       'convs' => $convs,
       'status' => 200,
     ]);
@@ -322,7 +311,7 @@ class MeetupRequestConversationController extends Controller
     }
 
     //check if auth user not muted
-    $partner_meet_profile = !empty($received_conv) ? $received_conv->sender_meet_profile : null;
+    $partner_meet_profile = !empty($received_conv) ? $received_conv->partnermeetprofile : null;
     if (
       $partner_meet_profile &&
       in_array($userprofile->profile_id, $partner_meet_profile->black_listed_arr)
@@ -408,12 +397,43 @@ class MeetupRequestConversationController extends Controller
         ],
       ]);
     }
+
     return response()->json([
       'message' => 'sent',
+      'conversation_id' => $conversation_id,
+      'origin_meet_request' => $meet_req,
+      'partner_meet_profile' => $partner_meet_profile,
       'conv' => $sendconv,
       'status' => 200,
     ]);
   }
+
+  public function setStatus($conversation_id, $min = null, $max = null, $status = "delivered")
+  {
+    if (empty($conversation_id) || (empty($min) && empty($max))) {
+      return false;
+    }
+    $set_status = MeetupRequestConversation::where([
+      'conversation_id' => $conversation_id,
+      'receiver_id' => $this->profile->profile_id
+    ]);
+    if (!empty($min)) {
+      $set_status = $set_status->where('id', '<=', $min);
+    } elseif (!empty($max)) {
+      $set_status = $set_status->where('id', '>=', $max);
+    } else {
+      return false;
+    }
+    return $set_status->where(
+      ['status', '!=', $status],
+      ['status', '!=', 'read'],
+    )->update([
+      'status' => $status,
+      'updated_at' => time()
+    ]);
+  }
+
+
 
   /**
    * this method handling uploading of chat image
@@ -462,24 +482,38 @@ class MeetupRequestConversationController extends Controller
       '1',
       '2'
     ];
-    if (!is_array($req->arr) || count($req->arr) < 1 || !in_array($req->type, $option)) {
+
+    if (!in_array($req->type, $option) || (empty($req->max)) && empty($req->min) || empty($req->conv_id)) {
       return response()->json([
         'errmsg' => 'Missing values to continue',
         'status' => 200,
       ]);
     }
-    $t = MeetupRequestConversation::where(function (Builder $query) {
-      $query->orWhere([
-        'sender_id' => $this->profile->profile_id,
-        'receiver_id' => $this->profile->profile_id,
+
+    $status = $req->type == "1" ? "delievered" : "read";
+    $partner = MeetupRequestConversation::with('sender_profile.user')
+      ->firstWhere('receiver_id', $this->profile->profile_id);
+    $set_status = $this->setStatus($req->conv_id, $req->max, $req->max, $status);
+
+    if ($set_status && !empty($partner)  && !empty($partner->sender_profile)) {
+      FCMNotification::send([
+        "to" => $partner->sender_profile->user->device_token,
+        'priority' => 'high',
+        'content-available' => true,
+        'data' => [
+          'nav_id' => 'MEETREQ_CONVS',
+          'responseData' => [
+            'type' => $req->type == "1" ? 'SET_FCM_MEET_CONV_TO_DELIVERED' : 'SET_FCM_MEET_CONV_TO_READ',
+            'conv_id' => $req->conv_id,
+            'payload' => $req->min || $req->max,
+          ],
+        ],
       ]);
-    })
-      ->whereIn('id', $req->arr)
-      ->where('status', '!=', 'read')
-      ->update(['status' => $req->type == "1" ? "delievered" : "read"]);
+    }
+
 
     return response()->json([
-      'message' => "{$t} done",
+      'message' => "done",
       'status' => 200,
     ]);
   }

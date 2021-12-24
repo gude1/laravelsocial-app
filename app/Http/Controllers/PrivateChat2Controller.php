@@ -383,7 +383,7 @@ class PrivateChat2Controller extends Controller
             $created_chatid = $created_chatid->created_chatid;
         }
 
-        $chatlist = $this->getChats($created_chatid, $max, $min, 30);
+        $chatlist = $this->getChats($created_chatid, $min, $max, 30);
 
         if (count($chatlist) < 1 || count($chatlist['chats']) < 1) {
             return response()->json([

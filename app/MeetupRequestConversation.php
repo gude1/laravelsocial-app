@@ -9,17 +9,18 @@ class MeetupRequestConversation extends Model
     //
     public $timestamps = false;
     protected $guarded = [];
-    protected $hidden = ['num_new_msg'];
+    protected $hidden = ['num_new_msg', 'partnermeetprofile'];
 
     /**
      * The accessors to append to the model's array form.
      *
      * @var array
      */
-    protected $appends = ['num_new_msg'];
+    protected $appends = ['num_new_msg', 'partnermeetprofile'];
 
     /**
-     * accessor for num_new_msg
+     * Accessor for num_new_msg
+     * 
      */
     public function getNumNewMsgAttribute()
     {
@@ -32,7 +33,22 @@ class MeetupRequestConversation extends Model
     }
 
     /**
-     * accessor for chat_pics
+     * accessor for partnerprofile
+     * 
+     */
+    public function getPartnermeetprofileAttribute()
+    {
+        $profile = !is_null(auth()->user()) ? auth()->user()->profile : null;
+        if (!is_null($profile)) {
+            return  $profile->profile_id == $this->sender_id ?
+                MeetupSetting::firstWhere('owner_id', $this->receiver_id)
+                :  Profile::firstWhere('owner_id', $this->sender_id);
+        }
+    }
+
+    /**
+     * Accessor for chat_pics
+     * 
      */
     public function getChatPicAttribute($pics)
     {
