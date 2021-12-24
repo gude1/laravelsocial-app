@@ -400,8 +400,8 @@ class MeetupRequestConversationController extends Controller
 
     return response()->json([
       'message' => 'sent',
-      'conversation_id' => $conversation_id,
-      'origin_meet_request' => $meet_req,
+      'conv_id' => $conversation_id,
+      'meet_request' => $meet_req,
       'partner_meet_profile' => $partner_meet_profile,
       'conv' => $sendconv,
       'status' => 200,
