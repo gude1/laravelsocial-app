@@ -152,7 +152,7 @@ class MeetupRequestConversationController extends Controller
           'responseData' => [
             'type' => 'SET_FCM_MEET_CONV_TO_DELIVERED',
             'conv_id' => $conv_id,
-            'payload' => $meet_req_convs->first()->id,
+            'payload' => ['min' => $meet_req_convs->first()->id],
           ],
         ],
       ]);
@@ -232,7 +232,7 @@ class MeetupRequestConversationController extends Controller
           'responseData' => [
             'type' => 'SET_FCM_MEET_CONV_TO_DELIVERED',
             'conv_id' => $conv_id,
-            'payload' => $convs->first()->id,
+            'payload' => ['min' => $convs->first()->id],
           ],
         ],
       ]);
@@ -505,13 +505,11 @@ class MeetupRequestConversationController extends Controller
           'responseData' => [
             'type' => $req->type == "1" ? 'SET_FCM_MEET_CONV_TO_DELIVERED' : 'SET_FCM_MEET_CONV_TO_READ',
             'conv_id' => $req->conv_id,
-            'payload' => $req->min || $req->max,
+            'payload' => ['max' => $req->max, 'min' => $req->min]
           ],
         ],
       ]);
     }
-
-
     return response()->json([
       'message' => "done",
       'status' => 200,
