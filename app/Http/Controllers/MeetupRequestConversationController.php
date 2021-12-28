@@ -372,7 +372,6 @@ class MeetupRequestConversationController extends Controller
           🌌';
     $t = '📷';
 
-    $sendconv->refresh()->load(['sender_meet_profile', 'origin_meet_request', 'receiver_meet_profile']);
 
     $body_text = '';
     if (count($sendconv->chat_pic) > 0) {
@@ -402,7 +401,7 @@ class MeetupRequestConversationController extends Controller
       'message' => 'sent',
       'conv_id' => $conversation_id,
       'meet_request' => $meet_req,
-      'partner_meet_profile' => $partner_meet_profile,
+      'partner_meet_profile' => $sendconv->fresh()->partnermeetprofile,
       'conv' => $sendconv,
       'status' => 200,
     ]);

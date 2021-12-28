@@ -24,12 +24,15 @@ class MeetupRequestConversation extends Model
      */
     public function getNumNewMsgAttribute()
     {
-        $profile = auth()->user()->profile;
-        return $this->where([
-            'receiver_id' => $profile->profile_id,
-            'conversation_id' => $this->conversation_id,
-            ['status', '!=', 'read'],
-        ])->count();
+        $profile = !is_null(auth()->user()) ? auth()->user()->profile : null;
+        if (!is_null($profile)) {
+
+            return $this->where([
+                'receiver_id' => $profile->profile_id,
+                'conversation_id' => $this->conversation_id,
+                ['status', '!=', 'read'],
+            ])->count();
+        }
     }
 
     /**
