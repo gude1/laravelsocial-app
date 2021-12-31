@@ -26,7 +26,6 @@ class MeetupRequestConversation extends Model
     {
         $profile = !is_null(auth()->user()) ? auth()->user()->profile : null;
         if (!is_null($profile)) {
-
             return $this->where([
                 'receiver_id' => $profile->profile_id,
                 'conversation_id' => $this->conversation_id,
@@ -45,7 +44,7 @@ class MeetupRequestConversation extends Model
         if (!is_null($profile)) {
             return  $profile->profile_id == $this->sender_id ?
                 MeetupSetting::firstWhere('owner_id', $this->receiver_id)
-                :  Profile::firstWhere('owner_id', $this->sender_id);
+                :  MeetupSetting::firstWhere('owner_id', $this->sender_id);
         }
     }
 

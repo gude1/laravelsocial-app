@@ -51,7 +51,7 @@ class MeetupRequestConversationController extends Controller
     $min = $req->min;
     $max = $req->max;
     if (!is_null($min) && is_integer($min)) {
-      $meet_convs = MeetupRequestConversation::select('conversation_id')->whereHas('origin_meet_request', function (Builder $query) {
+      $meet_convs = MeetupRequestConversation::whereHas('origin_meet_request', function (Builder $query) {
         $query->where([
           'deleted' => false,
           ['expires_at', '>', time()],
@@ -67,10 +67,10 @@ class MeetupRequestConversationController extends Controller
         ->with(['origin_meet_request'])
         ->orderBy('id', 'desc')
         ->groupBy('conversation_id')
-        ->limit(15)
+        ->limit(1)
         ->get();
     } elseif (!is_null($max) && is_integer($max)) {
-      $meet_convs = MeetupRequestConversation::select('conversation_id')->whereHas('origin_meet_request', function (Builder $query) {
+      $meet_convs = MeetupRequestConversation::whereHas('origin_meet_request', function (Builder $query) {
         $query->where([
           'deleted' => false,
           ['expires_at', '>', time()],
@@ -86,10 +86,10 @@ class MeetupRequestConversationController extends Controller
         ->with(['origin_meet_request'])
         ->orderBy('id', 'desc')
         ->groupBy('conversation_id')
-        ->limit(15)
+        ->limit(1)
         ->get();
     } else {
-      $meet_convs = MeetupRequestConversation::select('conversation_id')->whereHas('origin_meet_request', function (Builder $query) {
+      $meet_convs = MeetupRequestConversation::whereHas('origin_meet_request', function (Builder $query) {
         $query->where([
           'deleted' => false,
           ['expires_at', '>', time()],
@@ -104,7 +104,7 @@ class MeetupRequestConversationController extends Controller
         ->with(['origin_meet_request'])
         ->orderBy('id', 'desc')
         ->groupBy('conversation_id')
-        ->limit(15)
+        ->limit(1)
         ->get();
     }
 
@@ -407,7 +407,7 @@ class MeetupRequestConversationController extends Controller
     ]);
   }
 
-  public function setStatus($conversation_id, $min = null, $max = null, $status = "delivered")
+  public function setStatus($conversation_id, $min = null, $max = null, $status = "delievered")
   {
     if (empty($conversation_id) || (empty($min) && empty($max))) {
       return false;
@@ -417,19 +417,26 @@ class MeetupRequestConversationController extends Controller
       'receiver_id' => $this->profile->profile_id
     ]);
     if (!empty($min)) {
-      $set_status = $set_status->where('id', '<=', $min);
+      return $set_status->where([
+        ['id', '<=', $min],
+        ['status', '!=', $status],
+        ['status', '!=', 'read'],
+      ])->update([
+        'status' => $status,
+        'updated_at' => time()
+      ]);
     } elseif (!empty($max)) {
-      $set_status = $set_status->where('id', '>=', $max);
+      return $set_status->where([
+        ['id', '>=', $max],
+        ['status', '!=', $status],
+        ['status', '!=', 'read'],
+      ])->update([
+        'status' => $status,
+        'updated_at' => time()
+      ]);
     } else {
       return false;
     }
-    return $set_status->where(
-      ['status', '!=', $status],
-      ['status', '!=', 'read'],
-    )->update([
-      'status' => $status,
-      'updated_at' => time()
-    ]);
   }
 
 
@@ -492,7 +499,7 @@ class MeetupRequestConversationController extends Controller
     $status = $req->type == "1" ? "delievered" : "read";
     $partner = MeetupRequestConversation::with('sender_profile.user')
       ->firstWhere('receiver_id', $this->profile->profile_id);
-    $set_status = $this->setStatus($req->conv_id, $req->max, $req->max, $status);
+    $set_status = $this->setStatus($req->conv_id, $req->min, $req->max, $status);
 
     if ($set_status && !empty($partner)  && !empty($partner->sender_profile)) {
       FCMNotification::send([
@@ -509,6 +516,7 @@ class MeetupRequestConversationController extends Controller
         ],
       ]);
     }
+
     return response()->json([
       'message' => "done",
       'status' => 200,

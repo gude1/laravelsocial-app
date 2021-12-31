@@ -265,7 +265,7 @@ class MeetupRequestController extends Controller
 
         if ($num_times < 1) {
             return response()->json([
-                'errmsg' => 'You can only make 3 meet request per day',
+                'errmsg' => 'You can only create 3 meet request per day',
                 'status' => 400,
             ]);
         }
