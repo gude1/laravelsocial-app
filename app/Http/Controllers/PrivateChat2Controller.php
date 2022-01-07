@@ -109,7 +109,7 @@ class PrivateChat2Controller extends Controller
                 'content-available' => true,
                 'data' => [
                     'nav_id' => 'PRIVATECHATLIST',
-                    'responseData' => [
+                    'payload' => [
                         'type' => 'SET_PRIVATECHAT_READ_STATUS',
                         'payload' => [$item],
                     ],
@@ -296,9 +296,10 @@ class PrivateChat2Controller extends Controller
             'content-available' => true,
             'data' => [
                 'nav_id' => 'PRIVATECHAT',
-                'responseData' => [
+                'notification' => true,
+                'payload' => [
                     'type' => 'SET_FCM_PRIVATECHAT',
-                    'payload' => [$new_chat, $receiver_profile],
+                    'payload' => [$new_chat, $userprofile->load('user')],
                 ],
             ],
         ]);
@@ -403,8 +404,7 @@ class PrivateChat2Controller extends Controller
                 'priority' => 'high',
                 'content-available' => true,
                 'data' => [
-                    'nav_id' => 'PRIVATECHATLIST',
-                    'responseData' => [
+                    'payload' => [
                         'type' => 'SET_FCM_PRIVATECHAT_READ_STATUS',
                         'payload' => [$payload],
                     ],
@@ -523,7 +523,7 @@ class PrivateChat2Controller extends Controller
             'content-available' => true,
             'data' => [
                 'nav_id' => 'PRIVATECHATLIST',
-                'responseData' => [
+                'payload' => [
                     'type' => 'SET_PRIVATECHAT_READ_STATUS',
                     'payload' => [$payload_arr],
                 ],
