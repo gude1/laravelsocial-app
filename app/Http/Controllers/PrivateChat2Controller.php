@@ -109,7 +109,7 @@ class PrivateChat2Controller extends Controller
                 'content-available' => true,
                 'data' => [
                     'nav_id' => 'PRIVATECHATLIST',
-                    'payload' => [
+                    'resdata' => [
                         'type' => 'SET_PRIVATECHAT_READ_STATUS',
                         'payload' => [$item],
                     ],
@@ -290,14 +290,26 @@ class PrivateChat2Controller extends Controller
                 'status' => 500,
             ]);
         }
+        $body_text = '';
+        if (count($new_chat->chat_pics) > 0) {
+            $body_text = '📷';
+        }
+        $body_text .= "{$new_chat->chat_msg}";
         FCMNotification::send([
             "to" => $receiver_profile->user->device_token,
             'priority' => 'high',
             'content-available' => true,
             'data' => [
                 'nav_id' => 'PRIVATECHAT',
-                'notification' => true,
-                'payload' => [
+                'notification' => [
+                    'identity' => "pchat{$new_chat->created_chatid}",
+                    'id' => $new_chat->id,
+                    'name' => 'PrivateChat',
+                    'body' => $body_text,
+                    'receiver' => $receiver_profile,
+                    'note_id' => "{$new_chat->private_chatid}",
+                ],
+                'resdata' => [
                     'type' => 'SET_FCM_PRIVATECHAT',
                     'payload' => [$new_chat, $userprofile->load('user')],
                 ],
@@ -404,7 +416,7 @@ class PrivateChat2Controller extends Controller
                 'priority' => 'high',
                 'content-available' => true,
                 'data' => [
-                    'payload' => [
+                    'resdata' => [
                         'type' => 'SET_FCM_PRIVATECHAT_READ_STATUS',
                         'payload' => [$payload],
                     ],
@@ -523,7 +535,7 @@ class PrivateChat2Controller extends Controller
             'content-available' => true,
             'data' => [
                 'nav_id' => 'PRIVATECHATLIST',
-                'payload' => [
+                'resdata' => [
                     'type' => 'SET_PRIVATECHAT_READ_STATUS',
                     'payload' => [$payload_arr],
                 ],
