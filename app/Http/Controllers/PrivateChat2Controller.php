@@ -207,7 +207,7 @@ class PrivateChat2Controller extends Controller
      */
     public function store(Request $req)
     {
-        $userprofile = $this->profile;
+        $userprofile = $this->profile->load('user');
         $validate = Validator::make($req->all(), [
             'chat_msg' => 'sometimes|bail|required|between:1,300|string',
             'chat_pic' => 'sometimes|bail|required|mimes:jpg,jpeg,png,bmp,gif,svg,webp|max:8000000',
@@ -306,7 +306,7 @@ class PrivateChat2Controller extends Controller
                     'id' => $new_chat->id,
                     'name' => 'PrivateChat',
                     'body' => $body_text,
-                    'receiver' => $receiver_profile,
+                    'sender' => $userprofile->load('user'),
                     'note_id' => "{$new_chat->private_chatid}",
                 ],
                 'resdata' => [
