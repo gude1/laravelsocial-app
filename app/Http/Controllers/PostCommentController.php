@@ -20,10 +20,11 @@ class PostCommentController extends Controller
   protected $muted_profiles = [];
   protected $blocked_profiles = [];
   /**
-  *Instantiate a new controller instance.
-  * @return void
-  */
-  public function __construct() {
+   *Instantiate a new controller instance.
+   * @return void
+   */
+  public function __construct()
+  {
     $this->middleware('jwt.verify');
     $this->middleware('app.verify');
     $this->user = auth()->user();
@@ -43,11 +44,12 @@ class PostCommentController extends Controller
   }
 
   /**
-  * Display a listing of the resource.
-  *
-  * @return \Illuminate\Http\Response
-  */
-  public function index() {
+   * Display a listing of the resource.
+   *
+   * @return \Illuminate\Http\Response
+   */
+  public function index()
+  {
     //return [PostComment::truncate()];
     $userprofile = $this->profile;
     $postid = request()->postid;
@@ -62,8 +64,10 @@ class PostCommentController extends Controller
       'archived' => false,
       'deleted' => false,
     ]);
-    if (is_null($post) || empty($post) || $post->profile->user->approved == false || $post->profile->user->deleted == true ||
-      $post->profile->user->suspended == true || ($post->archived == true && $userprofile->profile_id != $post->poster_id)) {
+    if (
+      is_null($post) || empty($post) || $post->profile->user->approved == false || $post->profile->user->deleted == true ||
+      $post->profile->user->suspended == true || ($post->archived == true && $userprofile->profile_id != $post->poster_id)
+    ) {
       return response()->json([
         'errmsg' => 'owning post not found',
         'status' => 404,
@@ -88,13 +92,13 @@ class PostCommentController extends Controller
       });
       $query->orDoesntHave('profile_settings');
     })
-    ->with('profile.user')
-    ->where([
-      'postid' => $postid,
-      'deleted' => false,
-    ])
-    ->orderBy('id', 'desc')
-    ->simplePaginate(20);
+      ->with('profile.user')
+      ->where([
+        'postid' => $postid,
+        'deleted' => false,
+      ])
+      ->orderBy('id', 'desc')
+      ->simplePaginate(20);
 
     if (count($comments) < 1) {
       return response()->json([
@@ -111,16 +115,16 @@ class PostCommentController extends Controller
       'hiddens' => $post->comments()->where('hidden', true)->exists(),
       'status' => 302,
     ]);
-
   }
 
   /**
-  * Store a newly created resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function store(Request $request) {
+   * Store a newly created resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function store(Request $request)
+  {
     $userprofile = $this->profile;
     $user_muted_profiles = $this->muted_profiles;
     $user_blacklisted_posts = $this->blacklisted_posts;
@@ -157,7 +161,8 @@ class PostCommentController extends Controller
       'deleted' => false,
       'archived' => false,
     ]);
-    if (is_null($ownerpost) || $ownerpost->profile->user->approved != true ||
+    if (
+      is_null($ownerpost) || $ownerpost->profile->user->approved != true ||
       $ownerpost->profile->user->deleted == true || $ownerpost->profile->user->suspended == true
 
     ) {
@@ -195,6 +200,7 @@ class PostCommentController extends Controller
         'status' => 500,
       ]);
     }
+    Notification::makeMentions($request->mentions, 'postcommentmention', $comment->commentid);
     if ($ownerpost->profile->profile_id != $userprofile->profile_id) {
       Notification::saveNote([
         'receipient_id' => $ownerpost->profile->profile_id,
@@ -216,12 +222,13 @@ class PostCommentController extends Controller
   }
 
   /**
-  * Display the specified resource.
-  *
-  *  @param  \App\\Illuminate\Http\Request $request
-  * @return \Illuminate\Http\Response
-  */
-  public function show(Request $request) {
+   * Display the specified resource.
+   *
+   *  @param  \App\\Illuminate\Http\Request $request
+   * @return \Illuminate\Http\Response
+   */
+  public function show(Request $request)
+  {
     $commentid = $request->commentid;
     $userprofile = $this->profile;
     if (empty($commentid) || is_null($commentid)) {
@@ -260,15 +267,15 @@ class PostCommentController extends Controller
       "You blocked {$comment->profile->user->username}" : null,*/
       'status' => 302,
     ]);
-
   }
   /**
-  * public function to handle liking/disliking of comment starts here
-  *
-  * @param  \Illuminate\Http\Request  $request
-  *  @return \Illuminate\Http\Response
-  */
-  public function likeAction(Request $req) {
+   * public function to handle liking/disliking of comment starts here
+   *
+   * @param  \Illuminate\Http\Request  $request
+   *  @return \Illuminate\Http\Response
+   */
+  public function likeAction(Request $req)
+  {
     $userprofile = $this->profile;
     $commentid = $req->commentid;
     if (empty($commentid) || is_null($commentid)) {
@@ -278,11 +285,12 @@ class PostCommentController extends Controller
       ]);
     }
     $tolikeactionpostcomment = PostComment::with(['owner_post', 'profile.user'])
-    ->firstWhere([
-      'commentid' => $commentid,
-      'deleted' => false,
-    ]);
-    if (is_null($tolikeactionpostcomment) || $tolikeactionpostcomment->profile->user->deleted == true ||
+      ->firstWhere([
+        'commentid' => $commentid,
+        'deleted' => false,
+      ]);
+    if (
+      is_null($tolikeactionpostcomment) || $tolikeactionpostcomment->profile->user->deleted == true ||
       $tolikeactionpostcomment->profile->user->suspended == true ||
       $tolikeactionpostcomment->profile->user->approved != true || ($tolikeactionpostcomment->hidden == true &&
         $tolikeactionpostcomment->commenter_id != $userprofile->profile_id) || ($tolikeactionpostcomment->hidden == true &&
@@ -295,7 +303,7 @@ class PostCommentController extends Controller
     }
 
     $checklikestatus = $tolikeactionpostcomment->likes()
-    ->firstWhere('liker_id', $userprofile->profile_id);
+      ->firstWhere('liker_id', $userprofile->profile_id);
 
     if (is_null($checklikestatus) || empty($checklikestatus)) {
       /**ensure certain conditions are met before action are executed */
@@ -356,12 +364,13 @@ class PostCommentController extends Controller
   }
 
   /**
-  * public function to hide comment for owner post
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function hideCommentAction(Request $req) {
+   * public function to hide comment for owner post
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function hideCommentAction(Request $req)
+  {
     $userprofile = $this->profile;
     $tohidecommentid = $req->commentid;
     if (is_null($tohidecommentid) || empty($tohidecommentid)) {
@@ -407,12 +416,13 @@ class PostCommentController extends Controller
   }
 
   /**
-  * public function to get likers list
-  *
-  * @param  \Illuminate\Http\Request  $request
-  *  @return \Illuminate\Http\Response
-  */
-  public function getLikesList(Request $req) {
+   * public function to get likers list
+   *
+   * @param  \Illuminate\Http\Request  $request
+   *  @return \Illuminate\Http\Response
+   */
+  public function getLikesList(Request $req)
+  {
     $userprofile = $this->profile;
     $commentid = $req->commentid;
     if (is_null($commentid) || empty($commentid)) {
@@ -425,7 +435,8 @@ class PostCommentController extends Controller
       'commentid' => $commentid,
       'deleted' => false,
     ]);
-    if (is_null($comment) || empty($comment) || $comment->profile->user->deleted == true || $comment->profile->user->suspended == true || $comment->profile->user->approved != true || ($comment->hidden == true && $comment->owner_post->poster_id != $userprofile->profile_id) || ($comment->hidden == true && $comment->commenter_id != $userprofile->profile_id)
+    if (
+      is_null($comment) || empty($comment) || $comment->profile->user->deleted == true || $comment->profile->user->suspended == true || $comment->profile->user->approved != true || ($comment->hidden == true && $comment->owner_post->poster_id != $userprofile->profile_id) || ($comment->hidden == true && $comment->commenter_id != $userprofile->profile_id)
     ) {
       return response()->json([
         'errmsg' => 'not found',
@@ -433,21 +444,21 @@ class PostCommentController extends Controller
       ]);
     }
     $likers_list = $comment->likes()
-    ->whereHas('profile', function (Builder $query) {
-      $query->whereHas('user', function (Builder $query) {
-        $query->where([
-          'deleted' => false,
-          'approved' => true,
-        ]);
-      });
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
-      });
-      $query->orDoesntHave('profile_settings');
-    })
-    ->with('profile.user')
-    ->orderBy('id', 'desc')
-    ->simplePaginate(10);
+      ->whereHas('profile', function (Builder $query) {
+        $query->whereHas('user', function (Builder $query) {
+          $query->where([
+            'deleted' => false,
+            'approved' => true,
+          ]);
+        });
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
+      })
+      ->with('profile.user')
+      ->orderBy('id', 'desc')
+      ->simplePaginate(10);
     if (count($likers_list) < 1) {
       return response()->json([
         'errmsg' => 'No likes yet',
@@ -463,23 +474,25 @@ class PostCommentController extends Controller
   }
 
   /**
-  * Update the specified resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @param  \App\PostComment  $postComment
-  * @return \Illuminate\Http\Response
-  */
-  public function update(Request $request, PostComment $postComment) {
+   * Update the specified resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @param  \App\PostComment  $postComment
+   * @return \Illuminate\Http\Response
+   */
+  public function update(Request $request, PostComment $postComment)
+  {
     //
   }
 
   /**
-  * sets deleted to true for post comments
-  *
-  *  @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function destroy(Request $request) {
+   * sets deleted to true for post comments
+   *
+   *  @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function destroy(Request $request)
+  {
 
     $userprofile = $this->profile;
     $postcommentid = $request->postcommentid;
@@ -516,16 +529,16 @@ class PostCommentController extends Controller
       'ownerpost' => $ownerpost->fresh('profile.user'),
       'status' => 200,
     ]);
-
   }
 
   /**
-  * Remove the specified resource from storage.
-  *
-  *  @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function destroyActual(Request $request) {
+   * Remove the specified resource from storage.
+   *
+   *  @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function destroyActual(Request $request)
+  {
     /*
         # when you know your comment was dumb as fuck! :)
         # i am the code to erase it
@@ -557,6 +570,5 @@ class PostCommentController extends Controller
       'ownerpost' => $ownerpost->fresh('profile.user'),
       'status' => 200,
     ]);
-
   }
 }

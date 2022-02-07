@@ -20,6 +20,7 @@ class CreateNotificationsTable extends Migration
             $table->string('receipient_id');
             $table->string('link')->nullable();
             $table->string('linkmodel');
+            $table->boolean('is_mention')->default(false);
             $table->boolean('deleted')->default(false);
             $table->integer('created_at')->default(0);
             $table->integer('updated_at')->default(0);

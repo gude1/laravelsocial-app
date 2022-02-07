@@ -173,6 +173,7 @@ class PostCommentReplyController extends Controller
             ]);
         }
 
+        Notification::makeMentions($req->mentions, 'postcommentreplymention', $replyaction->replyid);
         if ($owner_comment->profile->profile_id != $userprofile->profile_id) {
             Notification::saveNote([
                 'receipient_id' => $owner_comment->profile->profile_id,
@@ -197,6 +198,7 @@ class PostCommentReplyController extends Controller
      */
     public function show(Request $req)
     {
+        $userprofile = $this->profile;
         $replyid = $req->replyid;
         if (is_null($replyid) || empty($replyid)) {
             return response()->json([
@@ -382,6 +384,7 @@ class PostCommentReplyController extends Controller
      */
     public function getLikesList(Request $req)
     {
+        $userprofile = $this->profile;
         $replyid = $req->replyid;
         if (is_null($replyid) || empty($replyid)) {
             return response()->json([

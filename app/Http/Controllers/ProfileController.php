@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Profile;
+use Exception;
 use App\User;
 use App\Notification;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,10 +24,11 @@ class ProfileController extends Controller
   protected $user_blocked_profiles_id = [];
 
   /**
-  *Instantiate a new controller instance.
-  * @return void
-  */
-  public function __construct() {
+   *Instantiate a new controller instance.
+   * @return void
+   */
+  public function __construct()
+  {
     $this->middleware('jwt.verify');
     $this->middleware('app.verify')->except('update');
     $this->user = auth()->user();
@@ -41,11 +43,12 @@ class ProfileController extends Controller
   }
 
   /**
-  * Display a listing of the resource.
-  *
-  * @return \Illuminate\Http\Response
-  */
-  public function index() {
+   * Display a listing of the resource.
+   *
+   * @return \Illuminate\Http\Response
+   */
+  public function index()
+  {
     return response()->json([
       'message' => 'profile found',
       'profile' => $this->profile->load('user'),
@@ -54,22 +57,24 @@ class ProfileController extends Controller
   }
 
   /**
-  * Store a newly created resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function store(Request $request) {
+   * Store a newly created resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function store(Request $request)
+  {
     //
   }
 
   /**
-  * Display the specified resource.
-  *
-  * @param  \App\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function show(Request $req) {
+   * Display the specified resource.
+   *
+   * @param  \App\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function show(Request $req)
+  {
     $userprofile = $this->profile;
     $showprofileid = $req->profileid;
 
@@ -100,12 +105,13 @@ class ProfileController extends Controller
   }
 
   /**
-  * Update the specified resource in storage.
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function update(Request $request) {
+   * Update the specified resource in storage.
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function update(Request $request)
+  {
     $user = $this->user;
     $profile = $user->profile;
     $oldprofilepic = $profile->avatar[0];
@@ -189,6 +195,8 @@ class ProfileController extends Controller
         }
         $profile->refresh();
         $profile->user->makeVisible(['phone']);
+
+        Notification::makeMentions([$request->mentions], 'profilebiomention', $profile->profile_id);
         return response()->json([
           'message' => 'updated',
           'profile' => $profile,
@@ -205,11 +213,12 @@ class ProfileController extends Controller
   }
 
   /***
-  * this function handling uploading of profile image
-  * @return \Illuminate\Http\Response
-  *
-  */
-  public function uploadProfilePic() {
+   * this function handling uploading of profile image
+   * @return \Illuminate\Http\Response
+   *
+   */
+  public function uploadProfilePic()
+  {
     $user = $this->user;
     if (request()->hasFile('avatar') && request()->file('avatar')->isValid()) {
       $ext = request()->avatar->extension();
@@ -226,12 +235,13 @@ class ProfileController extends Controller
     return '';
   }
   /**
-  * public function to  handle followprofileaction starts here
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function followProfileAction(Request $req) {
+   * public function to  handle followprofileaction starts here
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function followProfileAction(Request $req)
+  {
     $userprofile = $this->profile;
     $tofollowprofileid = $req->profileid;
     if (is_null($tofollowprofileid) || empty($tofollowprofileid)) {
@@ -250,7 +260,7 @@ class ProfileController extends Controller
 
     $tofollowactionprofile = Profile::with('user')->firstWhere('profile_id', $tofollowprofileid);
     $checkfollowstatus = $tofollowactionprofile->followers()
-    ->firstWhere('profile_follower_id', $userprofile->profile_id);
+      ->firstWhere('profile_follower_id', $userprofile->profile_id);
 
     if (is_null($checkfollowstatus)) {
       $check_profile_status = $this->checkStatus($userprofile->profile_id, $tofollowprofileid);
@@ -295,12 +305,13 @@ class ProfileController extends Controller
   }
 
   /**
-  * public function to get profile followers starts here
-  *
-  * @param \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function getProfileFollowers(Request $req) {
+   * public function to get profile followers starts here
+   *
+   * @param \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function getProfileFollowers(Request $req)
+  {
     $userprofile = $this->profile;
     $profile_id = $req->profile_id;
     if (is_null($profile_id) || empty($profile_id)) {
@@ -326,8 +337,8 @@ class ProfileController extends Controller
           'deleted' => false,
         ]);
       })
-      ->with('user')
-      ->firstWhere('profile_id', $profile_id);
+        ->with('user')
+        ->firstWhere('profile_id', $profile_id);
     }
     if (is_null($togetfollowers_profile)) {
       return response()->json([
@@ -337,23 +348,23 @@ class ProfileController extends Controller
     }
 
     $followers_list = $togetfollowers_profile
-    ->follower_profiles()
-    ->whereHas('user', function (Builder $query) {
-      $query->where([
-        'approved' => true,
-        'suspended' => true,
-        'deleted' => false,
-      ]);
-    })
-    ->where(function (Builder $query) {
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
-      });
-      $query->orDoesntHave('profile_settings');
-    })
-    ->with('user')
-    ->orderBy('id', 'desc')
-    ->simplePaginate(50);
+      ->follower_profiles()
+      ->whereHas('user', function (Builder $query) {
+        $query->where([
+          'approved' => true,
+          'suspended' => true,
+          'deleted' => false,
+        ]);
+      })
+      ->where(function (Builder $query) {
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
+      })
+      ->with('user')
+      ->orderBy('id', 'desc')
+      ->simplePaginate(50);
     if (count($followers_list) < 1) {
       return response()->json([
         'errmsg' => 'no followers!',
@@ -370,12 +381,13 @@ class ProfileController extends Controller
   }
 
   /**
-  * public function to get profiles followed by specified profile starts here
-  *
-  * @param \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function getProfilesFollowing(Request $req) {
+   * public function to get profiles followed by specified profile starts here
+   *
+   * @param \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function getProfilesFollowing(Request $req)
+  {
     $userprofile = $this->profile;
     $profile_id = $req->profile_id;
     if (is_null($profile_id) || empty($profile_id)) {
@@ -401,7 +413,7 @@ class ProfileController extends Controller
           'deleted' => false,
         ]);
       })
-      ->firstWhere('profile_id', $profile_id);
+        ->firstWhere('profile_id', $profile_id);
     }
     if (is_null($togetfollowings_profile)) {
       return response()->json([
@@ -410,23 +422,23 @@ class ProfileController extends Controller
       ]);
     }
     $followings_list = $togetfollowings_profile
-    ->followed_profiles()
-    ->whereHas('user', function (Builder $query) {
-      $query->where([
-        'approved' => true,
-        'suspended' => false,
-        'deleted' => false,
-      ]);
-    })
-    ->where(function (Builder $query) {
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
-      });
-      $query->orDoesntHave('profile_settings');
-    })
-    ->with('user')
-    ->orderBy('id', 'desc')
-    ->simplePaginate(50);
+      ->followed_profiles()
+      ->whereHas('user', function (Builder $query) {
+        $query->where([
+          'approved' => true,
+          'suspended' => false,
+          'deleted' => false,
+        ]);
+      })
+      ->where(function (Builder $query) {
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
+      })
+      ->with('user')
+      ->orderBy('id', 'desc')
+      ->simplePaginate(50);
     if (count($followings_list) < 1) {
       return response()->json([
         'errmsg' => 'not found!',
@@ -443,11 +455,12 @@ class ProfileController extends Controller
   }
 
   /**
-  * public function to profile followers you know
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function getknowProfileFollowers(Request $req) {
+   * public function to profile followers you know
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function getknowProfileFollowers(Request $req)
+  {
     $userprofile = $this->profile;
     $check_profile_status = $this->checkStatus($userprofile->profile_id, $req->profileid, 'b');
     if ($check_profile_status['status'] != 1) {
@@ -458,24 +471,24 @@ class ProfileController extends Controller
     }
     $userprofile = $this->profile;
     $related_profiles = $userprofile->followed_profiles()
-    ->whereHas('user', function (Builder $query) {
-      $query->where([
-        'approved' => true,
-        'suspended' => false,
-        'deleted' => false,
-      ]);
-    })
-    ->where(function (Builder $query) {
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
-      });
-      $query->orDoesntHave('profile_settings');
-    })
-    ->whereHas('followings', function (Builder $query) {
-      $query->where('profile_followed_id', request()->profileid);
-    })
-    ->orderBy('id', 'desc')
-    ->simplePaginate(50);
+      ->whereHas('user', function (Builder $query) {
+        $query->where([
+          'approved' => true,
+          'suspended' => false,
+          'deleted' => false,
+        ]);
+      })
+      ->where(function (Builder $query) {
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
+      })
+      ->whereHas('followings', function (Builder $query) {
+        $query->where('profile_followed_id', request()->profileid);
+      })
+      ->orderBy('id', 'desc')
+      ->simplePaginate(50);
     $related_profiles->loadMissing('user');
     $items = $related_profiles->items();
     $msg = null;
@@ -506,9 +519,10 @@ class ProfileController extends Controller
   }
 
   /**
-  * local function to store profile visits
-  */
-  protected function save_visit($profileid) {
+   * local function to store profile visits
+   */
+  protected function save_visit($profileid)
+  {
     $userprofile = $this->profile;
     if (is_null($profileid) || empty($profileid) || $userprofile->profile_id == $profileid) {
       return false;
@@ -541,10 +555,11 @@ class ProfileController extends Controller
   }
 
   /**
-  * local function to known if profile have known followers
-  *
-  */
-  protected function getKnownFollowers($profileid) {
+   * local function to known if profile have known followers
+   *
+   */
+  protected function getKnownFollowers($profileid)
+  {
     $userprofile = $this->profile;
     $check_profile_status = $this->checkStatus($userprofile->profile_id, $profileid, 'b');
     if ($check_profile_status['status'] != 1) {
@@ -552,25 +567,25 @@ class ProfileController extends Controller
     }
     $this->store_string = $profileid;
     $related_profiles = $userprofile->followed_profiles()
-    ->whereHas('user', function (Builder $query) {
-      $query->where([
-        'approved' => true,
-        'suspended' => false,
-        'deleted' => false,
-      ]);
-    })
-    ->where(function (Builder $query) {
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
-      });
-      $query->orDoesntHave('profile_settings');
-    })
-    ->whereHas('followings', function (Builder $query) {
-      $query->where('profile_followed_id', $this->store_string);
-    })
-    ->orderBy('id', 'desc')
-    ->take(2)
-    ->get();
+      ->whereHas('user', function (Builder $query) {
+        $query->where([
+          'approved' => true,
+          'suspended' => false,
+          'deleted' => false,
+        ]);
+      })
+      ->where(function (Builder $query) {
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
+      })
+      ->whereHas('followings', function (Builder $query) {
+        $query->where('profile_followed_id', $this->store_string);
+      })
+      ->orderBy('id', 'desc')
+      ->take(2)
+      ->get();
     $related_profiles->loadMissing('user');
     $msg = null;
     switch (count($related_profiles)) {
@@ -591,67 +606,68 @@ class ProfileController extends Controller
   }
 
   /**
-  * public function to get list of profiles
-  *
-  * @param \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function fetchProfiles(Request $req) {
+   * public function to get list of profiles
+   *
+   * @param \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function fetchProfiles(Request $req)
+  {
     $userprofile = $this->profile;
     $offsetarr = $req->offsetarr;
     $ignore_arr = $req->delimiter_arr;
     $ignore_arr = !is_array($ignore_arr) || count($ignore_arr) < 1 ? [$userprofile->id] : $ignore_arr;
     $visited_profiles = $userprofile->getVisitedProfiles()
-    ->with('user')
-    ->whereHas('user', function (Builder $query) {
-      $query->where([
-        'approved' => true,
-        'suspended' => false,
-        'deleted' => false,
-      ]);
-    })
-    ->where(function (Builder $query) {
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not alike', "%{$this->profile->profile_id}%");
-      });
-      $query->orDoesntHave('profile_settings');
-      $query->whereNotNull([
-        'avatar',
-        'bio',
-        'campus',
-      ]);
-    })
-    ->whereNotIn('profiles.id', $ignore_arr)
-    ->orderBy('id', 'desc')
-    ->limit(10)
-    //->distinct()
-    ->get();
+      ->with('user')
+      ->whereHas('user', function (Builder $query) {
+        $query->where([
+          'approved' => true,
+          'suspended' => false,
+          'deleted' => false,
+        ]);
+      })
+      ->where(function (Builder $query) {
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not alike', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
+        $query->whereNotNull([
+          'avatar',
+          'bio',
+          'campus',
+        ]);
+      })
+      ->whereNotIn('profiles.id', $ignore_arr)
+      ->orderBy('id', 'desc')
+      ->limit(10)
+      //->distinct()
+      ->get();
     $ignore_arr = array_merge($visited_profiles->pluck('id')->toArray(), $ignore_arr);
 
     $followed_profiles = $userprofile->followed_profiles()
-    ->with('user')
-    ->whereHas('user', function (Builder $query) {
-      $query->where([
-        'approved' => true,
-        'suspended' => false,
-        'deleted' => false,
-      ]);
-    })
-    ->where(function (Builder $query) {
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
-      });
-      $query->orDoesntHave('profile_settings');
-      $query->whereNotNull([
-        'avatar',
-        'bio',
-        'campus',
-      ]);
-    })
-    ->whereNotIn('profiles.id', $ignore_arr)
-    ->limit(10)
-    //->distinct()
-    ->get();
+      ->with('user')
+      ->whereHas('user', function (Builder $query) {
+        $query->where([
+          'approved' => true,
+          'suspended' => false,
+          'deleted' => false,
+        ]);
+      })
+      ->where(function (Builder $query) {
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
+        $query->whereNotNull([
+          'avatar',
+          'bio',
+          'campus',
+        ]);
+      })
+      ->whereNotIn('profiles.id', $ignore_arr)
+      ->limit(10)
+      //->distinct()
+      ->get();
     $ignore_arr = array_merge($followed_profiles->pluck('id')->toArray(), $ignore_arr);
 
     $campus_profiles = Profile::with('user')->whereHas('user', function (Builder $query) {
@@ -661,22 +677,22 @@ class ProfileController extends Controller
         'deleted' => false,
       ]);
     })
-    ->where(function (Builder $query) {
-      $query->whereNotNull([
-        'avatar',
-        'bio',
-        'campus',
-      ]);
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
-      });
-      $query->orDoesntHave('profile_settings');
-    })
-    ->where('campus', $userprofile->campus)
-    ->whereNotIn('id', $ignore_arr)
-    ->limit(10)
-    //->distinct()
-    ->get();
+      ->where(function (Builder $query) {
+        $query->whereNotNull([
+          'avatar',
+          'bio',
+          'campus',
+        ]);
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
+      })
+      ->where('campus', $userprofile->campus)
+      ->whereNotIn('id', $ignore_arr)
+      ->limit(10)
+      //->distinct()
+      ->get();
     $ignore_arr = array_merge($campus_profiles->pluck('id')->toArray(), $ignore_arr);
 
     $general_profiles = Profile::with('user')->WhereHas('user', function (Builder $query) {
@@ -686,22 +702,22 @@ class ProfileController extends Controller
         'deleted' => false,
       ]);
     })
-    ->where(function (Builder $query) {
-      $query->whereHas('profile_settings', function (Builder $query) {
-        $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
-      });
-      $query->orDoesntHave('profile_settings');
-      $query->whereNotNull([
-        'avatar',
-        'bio',
-        'campus',
-      ]);
-    })
-    ->whereNotIn('id', $ignore_arr)
-    ->orderBy('id', 'desc')
-    ->limit(10)
-    //  ->distinct()
-    ->get();
+      ->where(function (Builder $query) {
+        $query->whereHas('profile_settings', function (Builder $query) {
+          $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        });
+        $query->orDoesntHave('profile_settings');
+        $query->whereNotNull([
+          'avatar',
+          'bio',
+          'campus',
+        ]);
+      })
+      ->whereNotIn('id', $ignore_arr)
+      ->orderBy('id', 'desc')
+      ->limit(10)
+      //  ->distinct()
+      ->get();
     $ignore_arr = array_merge($general_profiles->pluck('id')->toArray(), $ignore_arr);
 
     $result_arr = array_merge(
@@ -726,12 +742,13 @@ class ProfileController extends Controller
   }
 
   /**
-  * public function to search through profile via keyword
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function searchProfiles(Request $req) {
+   * public function to search through profile via keyword
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function searchProfiles(Request $req)
+  {
     $keyword = $req->keyword;
     if (is_null($keyword) || empty($keyword)) {
       return response()->json([
@@ -742,47 +759,47 @@ class ProfileController extends Controller
     if ($keyword[0] == "@") {
       $keyword = substr($keyword, 1);
       $search_results = User::with('profile')
-      ->whereHas('profile', function (Builder $query) {
-        $query->where(function (Builder $query) {
-          $query->whereNotNull([
-            'avatar',
-            'bio',
-            'campus',
-          ]);
-          $query->whereHas('profile_settings', function (Builder $query) {
-            $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        ->whereHas('profile', function (Builder $query) {
+          $query->where(function (Builder $query) {
+            $query->whereNotNull([
+              'avatar',
+              'bio',
+              'campus',
+            ]);
+            $query->whereHas('profile_settings', function (Builder $query) {
+              $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+            });
+            $query->orDoesntHave('profile_settings');
           });
-          $query->orDoesntHave('profile_settings');
-        });
-      })
-      ->where([
-        ['username', 'like', "%{$keyword}%"],
-        ['approved', '=', true],
-        ['suspended', '=', false],
-        ['deleted', '=', false],
-      ])
-      ->simplePaginate(20);
+        })
+        ->where([
+          ['username', 'like', "%{$keyword}%"],
+          ['approved', '=', true],
+          ['suspended', '=', false],
+          ['deleted', '=', false],
+        ])
+        ->simplePaginate(20);
     } else {
       $search_results = User::with('profile')
-      ->whereHas('profile', function (Builder $query) {
-        $query->where('profile_name', 'like', "%" . request()->keyword . "%");
-        $query->where(function (Builder $query) {
-          $query->whereNotNull([
-            'avatar',
-            'bio',
-            'campus',
-          ]);
-          $query->whereHas('profile_settings', function (Builder $query) {
-            $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+        ->whereHas('profile', function (Builder $query) {
+          $query->where('profile_name', 'like', "%" . request()->keyword . "%");
+          $query->where(function (Builder $query) {
+            $query->whereNotNull([
+              'avatar',
+              'bio',
+              'campus',
+            ]);
+            $query->whereHas('profile_settings', function (Builder $query) {
+              $query->where('blocked_profiles', 'not like', "%{$this->profile->profile_id}%");
+            });
+            $query->orDoesntHave('profile_settings');
           });
-          $query->orDoesntHave('profile_settings');
-        });
-      })
-      ->where([
-        'approved' => true,
-        'deleted' => false,
-      ])
-      ->simplePaginate(20);
+        })
+        ->where([
+          'approved' => true,
+          'deleted' => false,
+        ])
+        ->simplePaginate(20);
     }
     if (count($search_results) < 1) {
       return response()->json([
@@ -799,12 +816,13 @@ class ProfileController extends Controller
   }
 
   /**
-  * public function to handle muteprofile action
-  *
-  * @param  \Illuminate\Http\Request  $request
-  * @return \Illuminate\Http\Response
-  */
-  public function muteProfileAction(Request $req) {
+   * public function to handle muteprofile action
+   *
+   * @param  \Illuminate\Http\Request  $request
+   * @return \Illuminate\Http\Response
+   */
+  public function muteProfileAction(Request $req)
+  {
     $userprofile = $this->profile;
     $tomuteprofileid = $req->profileid;
     if (
@@ -848,12 +866,13 @@ class ProfileController extends Controller
   }
 
   /**
-  * public function to handle muteprofile action
-  *
-  * @param  \Illuminate\Http\Request  $req
-  * @return \Illuminate\Http\Response
-  */
-  public function blockProfileAction(Request $req) {
+   * public function to handle muteprofile action
+   *
+   * @param  \Illuminate\Http\Request  $req
+   * @return \Illuminate\Http\Response
+   */
+  public function blockProfileAction(Request $req)
+  {
     $userprofile = $this->profile;
     $toblockprofileid = $req->profileid;
     if (
@@ -897,21 +916,23 @@ class ProfileController extends Controller
   }
 
   /**
-  * public function to delete file from storage
-  */
-  public function deleteFile($file) {
+   * public function to delete file from storage
+   */
+  public function deleteFile($file)
+  {
     if (File::exists($file)) {
       File::delete($file);
     }
   }
 
   /**
-  * Remove the specified resource from storage.
-  *
-  * @param  \App\Profile  $profile
-  * @return \Illuminate\Http\Response
-  */
-  public function destroy(Profile $profile) {
+   * Remove the specified resource from storage.
+   *
+   * @param  \App\Profile  $profile
+   * @return \Illuminate\Http\Response
+   */
+  public function destroy(Profile $profile)
+  {
     //
   }
 }

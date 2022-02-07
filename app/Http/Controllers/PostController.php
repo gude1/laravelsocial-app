@@ -6,7 +6,9 @@ use App\Notification;
 use App\Post;
 use App\Profile;
 use App\PageVisits;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\File;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -419,6 +421,7 @@ class PostController extends Controller
       ]);
     }
     $post_image_length = count($request->post_image);
+
     $thumbnail_post_length = count($request->thumb_post_image);
     //check if postimages and thumbnails match
     if ($post_image_length != $thumbnail_post_length) {
@@ -436,6 +439,7 @@ class PostController extends Controller
       ]);
     }
     //upload post images  ends here
+
     $data = $request->only(
       'post_text',
       'anonymous'
@@ -454,6 +458,8 @@ class PostController extends Controller
         'num_posts' => ++$usernumpost,
       ]);
       $dbpostimgcount = count($postimages);
+
+      Notification::makeMentions($request->mentions, 'postmention', $post->postid);
       return response()->json([
         'message' => 'Posted',
         'post' => $post,
@@ -1153,9 +1159,10 @@ class PostController extends Controller
         'deleted' => false,
         'archived' => false,
       ])
-
+      ->orderBy('id', 'desc')
       ->simplePaginate(10);
-    if (count($result_posts) < 1) {
+
+    if (count($result_posts)) {
       return response()->json([
         'errmsg' => "no results for search word : $searchword",
         'status' => 404,

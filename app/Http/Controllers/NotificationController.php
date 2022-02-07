@@ -40,7 +40,7 @@ class NotificationController extends Controller
 
 
     /**
-     * Display a listing of the resource.
+     * Get auth user notifications
      *
      * @return \Illuminate\Http\Response
      */
@@ -50,7 +50,7 @@ class NotificationController extends Controller
         if (request()->max) {
             $notes = $userprofile->notifications()
                 ->where('id', '>', request()->max)
-                ->where(['deleted' => false])
+                ->where(['deleted' => false, 'is_mention' => false])
                 ->with(['initiator_profile.user'])
                 ->orderBy('created_at', 'desc')
                 ->groupBy('linkmodel')
@@ -59,7 +59,7 @@ class NotificationController extends Controller
         } elseif (request()->min) {
             $notes = $userprofile->notifications()
                 ->where('id', '<', request()->min)
-                ->where(['deleted' => false])
+                ->where(['deleted' => false, 'is_mention' => false])
                 ->with(['initiator_profile.user'])
                 ->orderBy('created_at', 'desc')
                 ->groupBy('linkmodel')
@@ -68,7 +68,7 @@ class NotificationController extends Controller
         } else {
             $notes = $userprofile->notifications()
                 ->with(['initiator_profile.user'])
-                ->where(['deleted' => false])
+                ->where(['deleted' => false, 'is_mention' => false])
                 ->orderBy('created_at', 'desc')
                 ->groupBy('linkmodel')
                 ->limit(2)
@@ -89,6 +89,61 @@ class NotificationController extends Controller
         return response()->json([
             'message' => 'fetched',
             'notes' => $notes,
+            'status' => 200,
+        ]);
+    }
+
+    /**
+     * Get auth user metions
+     * 
+     * @param  \Illuminate\Http\Request  $req
+     * @return \Illuminate\Http\Response
+     */
+    public function getMentionsList(Request $req)
+    {
+        $userprofile = $this->profile;
+        if (request()->max) {
+            $mentions = $userprofile->notifications()
+                ->where('id', '>', request()->max)
+                ->where(['deleted' => false, 'is_mention' => true])
+                ->with(['initiator_profile.user'])
+                ->orderBy('created_at', 'desc')
+                ->groupBy('linkmodel')
+                ->limit(2)
+                ->get();
+        } elseif (request()->min) {
+            $mentions = $userprofile->notifications()
+                ->where('id', '<', request()->min)
+                ->where(['deleted' => false, 'is_mention' => true])
+                ->with(['initiator_profile.user'])
+                ->orderBy('created_at', 'desc')
+                ->groupBy('linkmodel')
+                ->limit(2)
+                ->get();
+        } else {
+            $mentions = $userprofile->notifications()
+                ->with(['initiator_profile.user'])
+                ->where(['deleted' => false, 'is_mention' => true])
+                ->orderBy('created_at', 'desc')
+                ->groupBy('linkmodel')
+                ->limit(2)
+                ->get();
+        }
+
+        $mentions->each(function ($item, $index) {
+            $this->addNoteProp($item);
+        });
+
+        if (count($mentions) < 1) {
+            return response()->json([
+                'errmsg' => 'No mentions',
+                'status' => 404,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'fetched',
+            'mentions' => $mentions,
             'status' => 200,
         ]);
     }
@@ -125,9 +180,29 @@ class NotificationController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Store a newly created resource in storage.
      *
-     * @param  \App\Notification  $notification
+     * @param  \Illuminate\Http\Request  $req
+     * @return \Illuminate\Http\Response
+     */
+    public function storeMention(Request $req)
+    {
+        $save = Notification::makeMentions($req->mentions, $req->type, $req->link);
+        if (!$save) {
+            return response()->json([
+                'errmsg' => 'could not complete request please try again',
+                'status' => 500,
+            ]);
+        }
+        return response()->json([
+            'message' => 'success',
+            'status' => 200,
+        ]);
+    }
+
+    /**
+     * Add properties to  notification object.
+     *
      */
     public function addNoteProp($note)
     {
@@ -137,6 +212,9 @@ class NotificationController extends Controller
         $note->related_count = Notification::where('linkmodel', $note->linkmodel)->where(['deleted' => false])->count() - 1;
         switch ($note->type) {
             case 'postlike':
+                $note->post = Post::with(['profile.user'])->firstWhere('postid', $note->link);
+                break;
+            case 'postshare':
                 $note->post = Post::with(['profile.user'])->firstWhere('postid', $note->link);
                 break;
             case 'postcomment':
@@ -153,6 +231,29 @@ class NotificationController extends Controller
                 break;
             default:
                 # code...
+                break;
+        }
+    }
+    /**
+     * Add properties to mention object.
+     *
+     */
+    public function addMentionProp($mention)
+    {
+        if (empty($mention) || is_null($mention)) {
+            return;
+        }
+        switch ($mention->type) {
+            case 'postmention':
+                $mention->post = Post::with(['profile.user'])->firstWhere('postid', $mention->link);
+                break;
+            case 'postcommentmention ':
+                $mention->postcomment = PostComment::with(['owner_post.profile.user', 'profile.user'])->firstWhere('commentid', $mention->link);
+                break;
+            case 'postcommentreplymention':
+                $mention->postcommentreply = PostCommentReply::with(['origin.profile.user', 'profile.user'])->firstWhere('replyid', $mention->link);
+                break;
+            default:
                 break;
         }
     }

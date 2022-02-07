@@ -11,10 +11,11 @@ use Illuminate\Routing\Controller as BaseController;
 class Controller extends BaseController
 {
   use AuthorizesRequests,
-  DispatchesJobs,
-  ValidatesRequests;
+    DispatchesJobs,
+    ValidatesRequests;
 
-  public static function checkStatus ($profile_id, $other_profile_id, $case) {
+  public static function checkStatus($profile_id, $other_profile_id, $case = '')
+  {
     if (empty($profile_id) || is_null($profile_id) || empty($other_profile_id) || is_null($other_profile_id) || $profile_id == $other_profile_id) {
       return [
         'status' => 0,

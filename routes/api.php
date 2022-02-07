@@ -2,6 +2,7 @@
 
 use App\Events\NotifyEvent;
 use Illuminate\Http\Request;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -149,6 +150,8 @@ Route::match(['get', 'post'], 'makereport', 'ComplaintSuggestReportController@st
  */
 Route::match(['get', 'post'], 'fetchnotes', 'NotificationController@index');
 Route::match(['get', 'post'], 'makenote', 'NotificationController@store');
+Route::match(['get', 'post'], 'fetchmentions', 'NotificationController@getMentionsList');
+Route::match(['get', 'post'], 'makemention', 'NotificationController@storeMention');
 
 /**
  * story controller

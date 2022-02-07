@@ -383,14 +383,17 @@ class MeetupRequestConversationController extends Controller
         "to" => $partner->user->device_token,
         'priority' => 'high',
         'data' => [
-          'responseData' => [
+          'resdata' => [
             'type' => 'ADD_FCM_MEET_CONV',
             'conv_id' => $conversation_id,
             'payload' => $sendconv,
           ],
           "notification" => [
-            "title" => $userprofile->meetup_setting->meetup_name,
-            'largeIconUrl' => $userprofile->meetup_setting->meetup_avatar,
+            'identity' => "mconv{$sendconv->conversation_id}",
+            'id' => $sendconv->id,
+            "sender" => $userprofile->meetup_setting,
+            'note_id' => "mconv{$sendconv->id}",
+            'name' => 'MeetupConversation',
             "body" => $body_text,
           ],
         ],

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\FCMNotification;
 use App\MeetupRequest;
 use App\MeetupSetting;
 use App\PageVisits;
@@ -258,10 +259,6 @@ class MeetupRequestController extends Controller
     public function store(Request $request)
     {
         $num_times = $this->returnNumRequestLeft();
-        $category_current_count = MeetupRequest::where([
-            'request_category' => $request->request_category,
-            ['expires_at', '>', time()],
-        ])->count();
 
         if ($num_times < 1) {
             return response()->json([
@@ -318,6 +315,7 @@ class MeetupRequestController extends Controller
                 'status' => 500,
             ]);
         }
+
         return response()->json([
             'message' => 'Meetup request created',
             'meetup_req' => $create_req->fresh(['requester_profile.user', 'requester_meet_profile']),
