@@ -16,7 +16,7 @@ class MeetupRequestConversation extends Model
      *
      * @var array
      */
-    protected $appends = ['num_new_msg', 'partnermeetprofile'];
+    protected $appends = ['num_new_msg', 'partnermeetprofile', 'mentions'];
 
     /**
      * Accessor for num_new_msg
@@ -46,6 +46,14 @@ class MeetupRequestConversation extends Model
                 MeetupSetting::firstWhere('owner_id', $this->receiver_id)
                 :  MeetupSetting::firstWhere('owner_id', $this->sender_id);
         }
+    }
+
+    /**
+     * accessor for mentions
+     */
+    public function getMentionsAttribute()
+    {
+        return Notification::where('link', $this->conversation_id)->limit(20)->pluck('receipient_id', 'mentioned_name');
     }
 
     /**

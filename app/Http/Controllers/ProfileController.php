@@ -196,7 +196,7 @@ class ProfileController extends Controller
         $profile->refresh();
         $profile->user->makeVisible(['phone']);
 
-        Notification::makeMentions([$request->mentions], 'profilebiomention', $profile->profile_id);
+        Notification::makeMentions($request->mentions, 'profilebiomention', $profile->profile_id);
         return response()->json([
           'message' => 'updated',
           'profile' => $profile,

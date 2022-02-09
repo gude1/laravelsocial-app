@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\FCMNotification;
 use App\MeetupRequest;
 use App\MeetupRequestConversation;
+use App\Notification;
 use App\PageVisits;
 use App\Profile;
 use Illuminate\Database\Eloquent\Builder;
@@ -378,6 +379,9 @@ class MeetupRequestConversationController extends Controller
       $body_text = '📷';
     }
     $body_text .= "{$sendconv->chat_msg}";
+
+    Notification::makeMentions($req->mentions, 'meetchatmention', $sendconv->private_chatid);
+
     if ($partner) {
       FCMNotification::send([
         "to" => $partner->user->device_token,

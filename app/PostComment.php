@@ -15,7 +15,7 @@ class PostComment extends Model
      *
      * @var array
      */
-    protected $appends = ['commentliked'];
+    protected $appends = ['commentliked', 'mentions'];
 
     /**
      * mutator for created_at
@@ -62,6 +62,14 @@ class PostComment extends Model
     }
 
     /**
+     * get note mentions if exists
+     */
+    public function getMentionsAttribute()
+    {
+        return Notification::where('link', $this->commentid)->limit(20)->pluck('receipient_id', 'mentioned_name');
+    }
+
+    /**
      * return true or false depending on if user has liked the comment
      */
     public function getCommentlikedAttribute($value)
@@ -99,5 +107,4 @@ class PostComment extends Model
     {
         return $this->hasMany(PostCommentReply::class, 'originid', 'commentid');
     }
-
 }

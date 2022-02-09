@@ -23,7 +23,7 @@ class Notification extends Model
     /**
      * static method to create note
      */
-    public static function saveNote($data = [])
+    public static function saveNote($data = [], $fcm = false)
     {
         $validate = Validator::make($data, [
             'type' => 'bail|required|string',
@@ -81,13 +81,13 @@ class Notification extends Model
     /**
      * static method to handle metions
      */
-    public static function makeMentions($data = [], $type = '', $link = '')
+    public static function makeMentions($data = [], $type = '', $link = '', $fcm = true)
     {
         if (!is_array($data) || count($data) < 1 || empty($type) || empty($link)) {
             return false;
         }
         foreach ($data as $username) {
-            Notification::mention($username, $type, $link);
+            Notification::mention($username, $type, $link, $fcm);
         }
         return true;
     }
@@ -95,7 +95,7 @@ class Notification extends Model
     /**
      * static method to create mention
      */
-    public static function mention($username = '', $type = '', $link = '')
+    public static function mention($username = '', $type = '', $link = '', $fcm = true)
     {
         $auth_user = auth()->user();
         if (empty($username) || empty($type) || is_null($auth_user) || empty($link)) {
@@ -120,11 +120,72 @@ class Notification extends Model
         }
 
         return Notification::saveNote([
-            'is_mention' => true,
             'type' => $type,
             'receipient_id' => $mentioned_user->profile->profile_id,
-            'link' => $link
-        ]);
+            'link' => $link,
+            'is_mention' => true,
+            'mentioned_name' => $username,
+        ], $fcm);
+    }
+
+    /**
+     * Static method to send fcm notification
+     */
+    private static function sendFcm($recipient_profile, $note)
+    {
+        $auth_user = auth()->user();
+        if (is_null($recipient_profile) || is_null($note)) {
+            return false;
+        }
+        $note_arr = [
+            "to" => $recipient_profile->user->device_token,
+            'priority' => 'high',
+            'content-available' => true,
+        ];
+
+        switch ($note->type) {
+            case 'postlike':
+                $post = Post::with(['profile.user'])->firstWhere('postid', $note->link);
+                break;
+            case 'postshare':
+                $note->post = Post::with(['profile.user'])->firstWhere('postid', $note->link);
+                break;
+            case 'postcomment':
+                $note->postcomment = PostComment::with(['owner_post.profile.user', 'profile.user'])->firstWhere('commentid', $note->link);
+                break;
+            case 'postcommentlike':
+                $note->postcomment = PostComment::with(['owner_post.profile.user', 'profile.user'])->firstWhere('commentid', $note->link);
+                break;
+            case 'postcommentreply':
+                $note->postcommentreply = PostCommentReply::with(['origin.profile.user', 'profile.user'])->firstWhere('replyid', $note->link);
+                break;
+            case 'postcommentreplylike':
+                $note->postcommentreply = PostCommentReply::with(['origin.profile.user', 'profile.user'])->firstWhere('replyid', $note->link);
+                break;
+            default:
+                # code...
+                break;
+        }
+        /*FCMNotification::send([
+            "to" => $recipient_profile->user->device_token,
+            'priority' => 'high',
+            'content-available' => true,
+            'data' => [
+                'nav_id' => 'PRIVATECHAT',
+                'notification' => [
+                    'identity' => "note{$note->id}",
+                    'id' => $note->id,
+                    'name' => 'PrivateChat',
+                    'body' => $body_text,
+                    'sender' => auth()->user(),
+                    'note_id' => "{$new_chat->private_chatid}",
+                ],
+                'resdata' => [
+                    'type' => 'SET_FCM_PRIVATECHAT',
+                    'payload' => [$new_chat, $userprofile->load('user')],
+                ],
+            ],
+        ]);*/
     }
 
     /**

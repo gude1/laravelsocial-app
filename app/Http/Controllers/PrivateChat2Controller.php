@@ -6,6 +6,7 @@ use App\FCMNotification;
 use App\PrivateChat;
 use App\PageVisits;
 use App\Profile;
+use App\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\Eloquent\Builder;
@@ -295,6 +296,7 @@ class PrivateChat2Controller extends Controller
             $body_text = '📷';
         }
         $body_text .= "{$new_chat->chat_msg}";
+
         FCMNotification::send([
             "to" => $receiver_profile->user->device_token,
             'priority' => 'high',
@@ -315,6 +317,7 @@ class PrivateChat2Controller extends Controller
                 ],
             ],
         ]);
+        Notification::makeMentions(['gidslab'], 'pchatmention', $new_chat->private_chatid);
 
         return response()->json([
             'message' => 'chat sent',

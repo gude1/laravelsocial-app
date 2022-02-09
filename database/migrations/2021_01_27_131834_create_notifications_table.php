@@ -16,11 +16,12 @@ class CreateNotificationsTable extends Migration
         Schema::create('notifications', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('type');
+            $table->boolean('is_mention')->default(false);
+            $table->string('mentioned_name')->nullable();
             $table->string('initiator_id');
             $table->string('receipient_id');
             $table->string('link')->nullable();
             $table->string('linkmodel');
-            $table->boolean('is_mention')->default(false);
             $table->boolean('deleted')->default(false);
             $table->integer('created_at')->default(0);
             $table->integer('updated_at')->default(0);

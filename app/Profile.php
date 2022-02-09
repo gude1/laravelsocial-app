@@ -21,6 +21,7 @@ class Profile extends Model
   protected $appends = [
     'profilemuted',
     'ublockedprofile',
+    'mentions',
     'profileblockedu',
     'following',
     'followsu',
@@ -126,6 +127,18 @@ class Profile extends Model
   }
 
   /**
+   * get note mentions if exists
+   */
+  public function getMentionsAttribute()
+  {
+    $auth_user = auth()->user();
+    if (!$auth_user) {
+      return null;
+    }
+    return Notification::where(['type' => 'profilebiomention', 'initiator_id' => $auth_user->profile->profile_id])->limit(20)->pluck('receipient_id', 'mentioned_name');
+  }
+
+  /**
    * get profile avatar
    */
   public function getAvatarAttribute($value)
@@ -141,9 +154,9 @@ class Profile extends Model
       null
     ];
   }
+
   /**
    * Function that establish relationship between profile and user model
-   * 
    */
   public function user()
   {

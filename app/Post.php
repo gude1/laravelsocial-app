@@ -15,9 +15,12 @@ class Post extends Model
      *
      * @var array
      */
-    protected $appends = ['postliked', 'postshared'];
+    protected $appends = ['postliked', 'postshared', 'mentions'];
+
+
     /**
      * get accesss to postimages json_decoding the json postimages containing
+     * 
      */
     public function getPostImageAttribute($value)
     {
@@ -44,7 +47,7 @@ class Post extends Model
         $likestatus = $this->postlikes()->where('liker_id', $userprofile->profile_id)->exists();
         return $likestatus ? 'postliked' : 'notliked';
     }
-    
+
     /**
      * to know if user has shared post
      */
@@ -55,14 +58,11 @@ class Post extends Model
         return $likestatus ? 'postshared' : 'notshared';
     }
 
-    /**
-     * get accesss to posttimecreated and transform to user readable format
-     */
-    /*public function getCreatedAtAttribute($value)
+    public function getMentionsAttribute()
     {
-    $value = $value + 0;
-    return Carbon::parse($value)->longAbsoluteDiffForHumans();
-    }*/
+        return Notification::where('link', $this->postid)->limit(20)->pluck('mentioned_name', 'receipient_id');
+    }
+
     /**
      * return number of postlikes
      */
@@ -154,5 +154,4 @@ class Post extends Model
             'liker_id', //value of a column in the intermediate model expected in relationship column of final
         );
     }
-
 }

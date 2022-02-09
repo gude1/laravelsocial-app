@@ -14,7 +14,7 @@ class PostCommentReply extends Model
      *
      * @var array
      */
-    protected $appends = ['replyliked'];
+    protected $appends = ['replyliked', 'mentions'];
 
     /**
      * get accesss to posttimecreated and transform to user readable format
@@ -54,6 +54,14 @@ class PostCommentReply extends Model
     public function getNumRepliesAttribute($value)
     {
         return $this->replies()->where(['deleted' => false])->count();
+    }
+
+    /**
+     * get note mentions if exists
+     */
+    public function getMentionsAttribute()
+    {
+        return Notification::where('link', $this->replyid)->limit(20)->pluck('receipient_id', 'mentioned_name');
     }
 
     /**

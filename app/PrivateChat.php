@@ -16,7 +16,7 @@ class PrivateChat extends Model
      *
      * @var array
      */
-    protected $appends = ['num_new_msg', 'partnerprofile'];
+    protected $appends = ['num_new_msg', 'partnerprofile', 'mentions'];
 
     /**
      * accessor for num_new_msg
@@ -49,6 +49,13 @@ class PrivateChat extends Model
         }
     }
 
+    /**
+     * accessor for mentions
+     */
+    public function getMentionsAttribute()
+    {
+        return Notification::where('link', $this->private_chatid)->limit(20)->pluck('receipient_id', 'mentioned_name');
+    }
 
     /**
      * accessor for chat_pics
