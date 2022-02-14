@@ -74,8 +74,10 @@ class PostComment extends Model
      */
     public function getCommentlikedAttribute($value)
     {
-        $userprofile = auth()->user()->profile;
-        return $this->likes()->where('liker_id', $userprofile->profile_id)->exists();
+        $user = auth()->user();
+        if ($user) {
+            return $this->likes()->where('liker_id', $user->profile->profile_id)->exists();
+        }
     }
 
     /**

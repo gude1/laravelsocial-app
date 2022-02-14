@@ -703,7 +703,7 @@ class PostController extends Controller
           'receipient_id' => $post->profile->profile_id,
           'type' => 'postlike',
           'link' => $post->postid
-        ]);
+        ], true);
       } else {
         Notification::deleteNote([
           'receipient_id' => $post->profile->profile_id,
@@ -797,7 +797,7 @@ class PostController extends Controller
           'receipient_id' => $post->profile->profile_id,
           'type' => 'postshare',
           'link' => $post->postid
-        ]);
+        ], true);
       } else {
         Notification::deleteNote([
           'receipient_id' => $post->profile->profile_id,

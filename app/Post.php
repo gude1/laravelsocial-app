@@ -43,9 +43,11 @@ class Post extends Model
      */
     public function getPostlikedAttribute()
     {
-        $userprofile = auth()->user()->profile;
-        $likestatus = $this->postlikes()->where('liker_id', $userprofile->profile_id)->exists();
-        return $likestatus ? 'postliked' : 'notliked';
+        $user = auth()->user();
+        if ($user) {
+            $likestatus = $this->postlikes()->where('liker_id', $user->profile->profile_id)->exists();
+            return $likestatus ? 'postliked' : 'notliked';
+        }
     }
 
     /**
@@ -53,9 +55,11 @@ class Post extends Model
      */
     public function getPostsharedAttribute()
     {
-        $userprofile = auth()->user()->profile;
-        $likestatus = $this->postshares()->where('sharer_id', $userprofile->profile_id)->exists();
-        return $likestatus ? 'postshared' : 'notshared';
+        $user = auth()->user();
+        if ($user) {
+            $likestatus = $this->postshares()->where('sharer_id', $user->profile->profile_id)->exists();
+            return $likestatus ? 'postshared' : 'notshared';
+        }
     }
 
     public function getMentionsAttribute()

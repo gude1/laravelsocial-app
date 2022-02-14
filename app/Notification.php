@@ -53,6 +53,9 @@ class Notification extends Model
         if (!$save) {
             return false;
         }
+        if ($fcm) {
+            Notification::sendFcm($save);
+        }
         return true;
     }
 
@@ -131,61 +134,94 @@ class Notification extends Model
     /**
      * Static method to send fcm notification
      */
-    private static function sendFcm($recipient_profile, $note)
+    private static function sendFcm($note)
     {
-        $auth_user = auth()->user();
-        if (is_null($recipient_profile) || is_null($note)) {
+        if (
+            empty($note)  ||
+            $note->receipient_profile->profileblockedu == true  ||
+            empty($note->receipient_profile->user->device_token)
+        ) {
             return false;
         }
+        $device_token = $note->receipient_profile->user->device_token;
+        $note->receipient_profile = null;
         $note_arr = [
-            "to" => $recipient_profile->user->device_token,
-            'priority' => 'high',
-            'content-available' => true,
+            'identity' => "note{$note->id}",
+            'id' => $note->id,
         ];
 
         switch ($note->type) {
             case 'postlike':
-                $post = Post::with(['profile.user'])->firstWhere('postid', $note->link);
+                $note_arr['post'] = Post::with(['profile.user'])->firstWhere('postid', $note->link);
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} like your post";
+                $note_arr['body'] = "{$note_arr['post']->post_text}";
+                $note_arr['name'] = "PostLike";
                 break;
             case 'postshare':
-                $note->post = Post::with(['profile.user'])->firstWhere('postid', $note->link);
+                $note_arr['post'] = Post::with(['profile.user'])->firstWhere('postid', $note->link);
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} like your post";
+                $note_arr['name'] = "PostShare";
                 break;
             case 'postcomment':
-                $note->postcomment = PostComment::with(['owner_post.profile.user', 'profile.user'])->firstWhere('commentid', $note->link);
+                $note_arr['postcomment'] = PostComment::with(['owner_post.profile.user'])->firstWhere('commentid', $note->link);
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} like your post";
+                $note_arr['body'] = "{$note_arr['postcomment']->comment_text}";
+                $note_arr['name'] = "PostComment";
                 break;
             case 'postcommentlike':
-                $note->postcomment = PostComment::with(['owner_post.profile.user', 'profile.user'])->firstWhere('commentid', $note->link);
+                $note_arr['postcomment'] = PostComment::with(['owner_post.profile.user'])->firstWhere('commentid', $note->link);
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} like your comment";
+                $note_arr['body'] = "{$note_arr['postcomment']->comment_text}";
+                $note_arr['name'] = "PostCommentLike";
                 break;
             case 'postcommentreply':
-                $note->postcommentreply = PostCommentReply::with(['origin.profile.user', 'profile.user'])->firstWhere('replyid', $note->link);
+                $note_arr['postcommentreply'] = PostCommentReply::with(['origin.profile.user'])->firstWhere('replyid', $note->link);
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} replied to your comment";
+                $note_arr['body'] = "{$note_arr['postcomentreply']->reply_text}";
+                $note_arr['name'] = "PostCommentReply";
                 break;
             case 'postcommentreplylike':
-                $note->postcommentreply = PostCommentReply::with(['origin.profile.user', 'profile.user'])->firstWhere('replyid', $note->link);
+                $note_arr['postcommentreply'] = PostCommentReply::with(['origin.profile.user'])->firstWhere('replyid', $note->link);
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} liked your reply";
+                $note_arr['body'] = "{$note_arr['postcomentreply']->reply_text}";
+                $note_arr['name'] = "PostCommentReplyLike";
+                break;
+            case 'postmention':
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} liked your reply";
+                $note_arr['post'] = Post::with(['profile.user'])->firstWhere('postid', $note->link);
+                $note_arr['name'] = "Post";
+                break;
+            case 'postcommentmention ':
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} mentioned you in a comment";
+                $note_arr['postcomment'] = PostComment::with(['owner_post.profile.user'])->firstWhere('commentid', $note->link);
+                $note_arr['name'] = "PostComment";
+                break;
+            case 'postcommentreplymention':
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} mentioned you in a reply";
+                $note_arr['postcommentreply'] = PostCommentReply::with(['origin.profile.user'])->firstWhere('replyid', $note->link);
+                $note_arr['name'] = "PostCommentReply";
+                break;
+            case 'profilebiomention':
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} mentioned you in a bio";
+                $note_arr['name'] = "Profile";
                 break;
             default:
                 # code...
                 break;
         }
-        /*FCMNotification::send([
-            "to" => $recipient_profile->user->device_token,
+
+        // dd($note_arr);
+
+        $t = FCMNotification::send([
+            "to" => $device_token,
             'priority' => 'high',
             'content-available' => true,
             'data' => [
-                'nav_id' => 'PRIVATECHAT',
-                'notification' => [
-                    'identity' => "note{$note->id}",
-                    'id' => $note->id,
-                    'name' => 'PrivateChat',
-                    'body' => $body_text,
-                    'sender' => auth()->user(),
-                    'note_id' => "{$new_chat->private_chatid}",
-                ],
-                'resdata' => [
-                    'type' => 'SET_FCM_PRIVATECHAT',
-                    'payload' => [$new_chat, $userprofile->load('user')],
-                ],
+                'notification' => $note_arr,
             ],
-        ]);*/
+        ]);
+
+        dump([$t, $note_arr]);
     }
 
     /**
@@ -199,8 +235,8 @@ class Notification extends Model
     /**
      * belongs To relationship to return recepient profile
      */
-    public function recipient_profile()
+    public function receipient_profile()
     {
-        return $this->belongsTo(Profile::class, 'recipient_id', 'profile_id');
+        return $this->belongsTo(Profile::class, 'receipient_id', 'profile_id');
     }
 }

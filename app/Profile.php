@@ -101,7 +101,7 @@ class Profile extends Model
       }
       return in_array($authprofile_id, $profilesettings->blocked_profiles);
     }
-    return null;
+    return false;
   }
 
   /**

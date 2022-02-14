@@ -347,7 +347,7 @@ class PostCommentController extends Controller
           'receipient_id' => $tolikeactionpostcomment->profile->profile_id,
           'type' => 'postcommentlike',
           'link' => $commentid
-        ]);
+        ], true);
       } else {
         Notification::deleteNote([
           'receipient_id' => $tolikeactionpostcomment->profile->profile_id,
