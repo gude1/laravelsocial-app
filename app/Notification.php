@@ -147,30 +147,33 @@ class Notification extends Model
         $note->receipient_profile = null;
         $note_arr = [
             'identity' => "note{$note->id}",
+            'sender' => $note->initiator_profile->load('user'),
             'id' => $note->id,
         ];
 
         switch ($note->type) {
             case 'postlike':
                 $note_arr['post'] = Post::with(['profile.user'])->firstWhere('postid', $note->link);
-                $note_arr['title'] = "{$note->initiator_profile->profile_name} like your post";
+                $note_arr['post']->info = [$note->initiator_profile->profile_id, "{$note->initiator_profile->profile_name} liked"];
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} liked your post";
                 $note_arr['body'] = "{$note_arr['post']->post_text}";
                 $note_arr['name'] = "PostLike";
                 break;
             case 'postshare':
                 $note_arr['post'] = Post::with(['profile.user'])->firstWhere('postid', $note->link);
-                $note_arr['title'] = "{$note->initiator_profile->profile_name} like your post";
+                $note_arr['post']->info = [$note->initiator_profile->profile_id, "{$note->initiator_profile->profile_name} shared"];
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} shared your post";
                 $note_arr['name'] = "PostShare";
                 break;
             case 'postcomment':
                 $note_arr['postcomment'] = PostComment::with(['owner_post.profile.user'])->firstWhere('commentid', $note->link);
-                $note_arr['title'] = "{$note->initiator_profile->profile_name} like your post";
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} commented on your post";
                 $note_arr['body'] = "{$note_arr['postcomment']->comment_text}";
                 $note_arr['name'] = "PostComment";
                 break;
             case 'postcommentlike':
                 $note_arr['postcomment'] = PostComment::with(['owner_post.profile.user'])->firstWhere('commentid', $note->link);
-                $note_arr['title'] = "{$note->initiator_profile->profile_name} like your comment";
+                $note_arr['title'] = "{$note->initiator_profile->profile_name} liked your comment";
                 $note_arr['body'] = "{$note_arr['postcomment']->comment_text}";
                 $note_arr['name'] = "PostCommentLike";
                 break;
